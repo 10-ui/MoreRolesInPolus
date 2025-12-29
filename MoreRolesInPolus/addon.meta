@@ -1,0 +1,11 @@
+﻿{
+	"Id" : "MadeByToaMoreRolesInPolus",
+	"Name" : "[Toa]MoreRolesInPolus",
+	"Author" : "10a",
+	"Description" : "NebulaOnThePolusで追加したい役職を追加するアドオンです。",
+	"Version" : "1.0",
+	"Build" : 0,
+	"Dependency" : [
+	],
+	"Hidden" : False
+}

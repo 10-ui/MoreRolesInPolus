@@ -1,0 +1,23 @@
+#Role 
+"role.anchor.name" : "潜望者"
+"role.anchor.blurb" : "混乱の海を航海せよ"
+"options.role.anchor.placeCoolDown" : "びっくり箱設置クールダウン"
+"options.role.anchor.cameraCoolDown" : "びっくり箱カメラクールダウン"
+"options.role.anchor.cameraDuration" : "びっくり箱カメラ使用時間"
+"options.role.anchor.numOfJacks" : "設置可能なびっくり箱の数"
+"options.role.anchor.detail" : "特製のベント（びっくり箱）を設置、使用できます。<br>びっくり箱はカメラにもなるので設置箇所は慎重に検討しましょう。"
+"button.label.place" : "設置"
+"button.label.camera" : "潜望"
+"button.label.left" : "左へ"
+"button.label.right" : "右へ"
+"ui.action.jack.place" : "びっくり箱を設置することができます。"
+
+#Modifier - RedHood
+"role.redHood.name" : "赤い帽子"
+"role.redHood.blurb" : "死を欺き、復讐の時を待て"
+"options.role.redHood.assignableTeam" : "付与可能な陣営"
+"options.role.redHood.assignableTeam.crewmate" : "クルーメイトのみ"
+"options.role.redHood.assignableTeam.impostor" : "インポスターのみ"
+"options.role.redHood.assignableTeam.neutral" : "第三陣営のみ"
+"options.role.redHood.assignableTeam.all" : "全陣営"
+"options.role.redHood.detail" : "敵陣営にキルされると仮死状態になります。<br>仮死中はキラーの視点で世界を見ることができます。<br>キラーの陣営の誰かが死亡すると、次の会議後に復活します。<br>キラーの陣営が全滅すると、復活せず通常の幽霊になります。"
