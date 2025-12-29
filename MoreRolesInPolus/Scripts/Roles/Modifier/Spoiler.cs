@@ -7,6 +7,7 @@ using Virial.Game;
 
 namespace Scripts.Roles.Modifier;
 
+//spoiler キルした相手の役職を確認できるインポスター用モディファイア
 public class Spoiler : DefinedAllocatableModifierTemplate, DefinedAllocatableModifier
 {
 

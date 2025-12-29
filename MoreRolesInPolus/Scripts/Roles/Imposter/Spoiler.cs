@@ -1,12 +1,14 @@
 
 namespace Scripts.Roles.Impostor;
 
-
+//spoiler キルした相手の役職を確認できるインポスター役職
+//
+//
 public class Spoiler : DefinedSingleAbilityRoleTemplate<Spoiler.Ability>, DefinedRole
 {
     private const string overlayKey = "role.spoiler.overlay";
 
-
+    
     private Spoiler() : base("spoiler", NebulaTeams.ImpostorTeam.Color, RoleCategory.ImpostorRole, NebulaTeams.ImpostorTeam, [])
     {
     }
@@ -19,6 +21,8 @@ public class Spoiler : DefinedSingleAbilityRoleTemplate<Spoiler.Ability>, Define
 
     public override Ability CreateAbility(GamePlayer player, int[] arguments) => new Ability(player, arguments.Length > 0 ? arguments[0] == 1 : false);
 
+    //オプション：残りのその役職の人数も表示するか
+    static private readonly BoolConfiguration CanSeeRemainingRoles = NebulaAPI.Configurations.Configuration("options.role.spoiler.CanSeeRemainingRoles", true);
     public class Ability : AbstractPlayerUsurpableAbility, IPlayerAbility
     {
 
@@ -30,7 +34,7 @@ public class Spoiler : DefinedSingleAbilityRoleTemplate<Spoiler.Ability>, Define
         Dictionary<Player, (DefinedRole role, int roleCount)> roleMap = [];
 
 
-
+        //キルク短い役職でキルしたときオーバーレイを上書きさせる
         int killCount = 0;
 
         [OnlyMyPlayer]
@@ -53,7 +57,8 @@ public class Spoiler : DefinedSingleAbilityRoleTemplate<Spoiler.Ability>, Define
                     return nowCount == killCount && lifespan.IsAliveObject;
                 }
 
-                NebulaAPI.GUI.ShowStickerOverlay(NebulaAPI.GUI.RawText(GUIAlignment.Center, AttributeAsset.OverlayContent, targetRole.DisplayColoredName + NebulaAPI.Language.Translate(overlayKey).Replace("%COUNT%", roleCount.ToString())), ev.Player.Position, () => !Isalive(),Isalive);//表示するたびにカウンター増やす　これが何番目かは覚える　
+
+                NebulaAPI.GUI.ShowStickerOverlay(NebulaAPI.GUI.RawText(GUIAlignment.Center, AttributeAsset.OverlayContent, CanSeeRemainingRoles?  targetRole.DisplayColoredName +  NebulaAPI.Language.Translate(overlayKey).Replace("%COUNT%", roleCount.ToString()) : targetRole.DisplayColoredName), ev.Player.Position, () => !Isalive(),Isalive);//表示するたびにカウンター増やす　これが何番目かは覚える　
 
 
             }
@@ -65,7 +70,7 @@ public class Spoiler : DefinedSingleAbilityRoleTemplate<Spoiler.Ability>, Define
             if (roleMap.ContainsKey(ev.Player))
             {
                 var targetRole = roleMap[ev.Player];
-                ev.Alternate(targetRole.role.DisplayColoredName + NebulaAPI.Language.Translate(overlayKey).Replace("%COUNT%", targetRole.roleCount.ToString()));
+                ev.Alternate(CanSeeRemainingRoles? targetRole.role.DisplayColoredName + NebulaAPI.Language.Translate(overlayKey).Replace("%COUNT%", targetRole.roleCount.ToString()) : targetRole.role.DisplayColoredName);
             } 
         }
     }
