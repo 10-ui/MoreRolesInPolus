@@ -21,3 +21,16 @@
 "options.role.redHood.assignableTeam.neutral" : "第三陣営のみ"
 "options.role.redHood.assignableTeam.all" : "全陣営"
 "options.role.redHood.detail" : "敵陣営にキルされると仮死状態になります。<br>仮死中はキラーの視点で世界を見ることができます。<br>キラーの陣営の誰かが死亡すると、次の会議後に復活します。<br>キラーの陣営が全滅すると、復活せず通常の幽霊になります。"
+
+#スポイラー spoiler impostor modifier
+"role.spoiler.name" : "スポイラー"
+"role.spoiler.blurb" : "募集中(スポイラー)"
+"options.role.spoiler.detail" : "れい！はキルするとその人の役職が分かり、その役職が残り何人か判別できます<br>なお判別された人数はその時の人数であり変化しない"
+"role.spoiler.overlay" : "残り%COUNT%人"
+
+#アキューサー neutral
+"role.accuser.name" : "アキューサー"
+"role.accuser.blurb" : "募集中(アキューサー)"
+"options.role.accuser.detail" : "他役職を一定数推測をすることにより勝利が出来ます"
+"options.role.accuser.NumOfGuessToWinOption" : "勝利に必要な推測成功回数"
+"end.accuser" : "アキューサー%EXTRA%勝利"
