@@ -41,13 +41,15 @@
 #スポイラー spoiler impostor modifier
 "role.spoiler.name" : "スポイラー"
 "role.spoiler.blurb" : "募集中(スポイラー)"
-"options.role.spoiler.detail" : "れい！はキルするとその人の役職が分かり、その役職が残り何人か判別できます<br>なお判別された人数はその時の人数であり変化しない"
+"options.role.spoiler.detail" : "スポイラーはキルするとその人の役職が分かり、その役職が残り何人か判別できます<br>なお判別された人数はその時の人数であり変化しない"
 "role.spoiler.overlay" : "残り%COUNT%人"
 "options.role.spoiler.CanSeeRemainingRoles" : "キルした役職の残り人数が見える"
 
 #アキューサー neutral
+"teams.accuser" : "アキューサー"
 "role.accuser.name" : "アキューサー"
 "role.accuser.blurb" : "募集中(アキューサー)"
 "options.role.accuser.detail" : "他役職を一定数推測をすることにより勝利が出来ます"
 "options.role.accuser.NumOfGuessToWinOption" : "勝利に必要な推測成功回数"
+"options.role.accuser.numOfGuessPerMeeting" : "１回の会議で推測できる回数"
 "end.accuser" : "アキューサー%EXTRA%勝利"
