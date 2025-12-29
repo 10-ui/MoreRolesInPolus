@@ -1,27 +1,3 @@
-using AmongUs.GameOptions;
-using Il2CppInterop.Runtime.Injection;
-using Nebula.Behavior;
-using Nebula.Game.Statistics;
-using Nebula.Map;
-using Nebula.Modules.Cosmetics;
-using Nebula.Modules.GUIWidget;
-using Nebula.Roles.MapLayer;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection.Metadata.Ecma335;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
-using Virial;
-using Virial.Assignable;
-using Virial.Components;
-using Virial.Configuration;
-using Virial.Events.Game.Meeting;
-using Virial.Events.Game.Minimap;
-using Virial.Events.Player;
-using Virial.Game;
-using static UnityEngine.GraphicsBuffer;
 
 namespace Scripts.Roles.Impostor;
 

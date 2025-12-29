@@ -1,22 +1,22 @@
 ﻿
-
-
 namespace Toa.Scripts.Roles.Crewmate;
 
-public class Archiver : DefinedSingleAbilityRoleTemplate<Archiver.Ability>, DefinedRole
+public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, DefinedRole
 {
-    private Archiver() : base("Archiver", new(255,211,90), RoleCategory.CrewmateRole, NebulaTeams.CrewmateTeam, [SurveyCooldownOption, SurveyDurationOption, SurveyTimeOption, MaxSurveyOption])
+    private Researcher() : base("researcher", new(104,251,194 ), RoleCategory.CrewmateRole, NebulaTeams.CrewmateTeam, [SurveyCooldownOption, SurveyDurationOption, SurveyTimeOption, MaxSurveyOption])
     {
-
     }
-
-    static private readonly FloatConfiguration SurveyCooldownOption = NebulaAPI.Configurations.Configuration("options.role.archiver.surveyCooldown", (0f, 60f, 2.5f), 20f, FloatConfigurationDecorator.Second);
-    private static readonly FloatConfiguration SurveyDurationOption = NebulaAPI.Configurations.Configuration("options.role.archiver.surveyDuration", (1f, 10f, 0.5f), 3f, FloatConfigurationDecorator.Second);
-    static private readonly FloatConfiguration SurveyTimeOption = NebulaAPI.Configurations.Configuration("options.role.archiver.surveytime", (10f, 60f, 2.5f), 30f, FloatConfigurationDecorator.Second);
-    static private readonly IntegerConfiguration MaxSurveyOption = NebulaAPI.Configurations.Configuration("options.role.archiver.maxsurvey", (0, 10, 1), 5, null, num => num == 0 ? Language.Translate("options.noLimit") : num.ToString());
+    Image? DefinedAssignable.IconImage => iconImage;
+    static readonly Image iconImage = NebulaAPI.AddonAsset.GetResource(string.Format("Crewmate/Researcher/Resarcher.png"))!.AsImage()!;
 
 
-    static public readonly Archiver MyRole = new();
+    static private readonly FloatConfiguration SurveyCooldownOption = NebulaAPI.Configurations.Configuration("options.role.researcher.surveyCooldown", (0f, 60f, 2.5f), 20f, FloatConfigurationDecorator.Second);
+    private static readonly FloatConfiguration SurveyDurationOption = NebulaAPI.Configurations.Configuration("options.role.researcher.surveyDuration", (1f, 10f, 0.5f), 3f, FloatConfigurationDecorator.Second);
+    static private readonly FloatConfiguration SurveyTimeOption = NebulaAPI.Configurations.Configuration("options.role.researcher.surveytime", (10f, 60f, 2.5f), 30f, FloatConfigurationDecorator.Second);
+    static private readonly IntegerConfiguration MaxSurveyOption = NebulaAPI.Configurations.Configuration("options.role.researcher.maxsurvey", (0, 10, 1), 5, null, num => num == 0 ? Language.Translate("options.noLimit") : num.ToString());
+
+
+    static public readonly Researcher MyRole = new();
 
 
     public override Ability CreateAbility(GamePlayer player, int[] arguments) => new(player, arguments.GetAsBool(0), arguments.Get(1, -1));
