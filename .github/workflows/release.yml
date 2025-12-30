@@ -1,0 +1,87 @@
+name: Release Build
+
+on:
+  push:
+    branches:
+      - release
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # タグ履歴を取得
+    
+    - name: Determine Release Type and Version
+      id: version
+      shell: bash
+      run: |
+        # 手動タグがpushされたかチェック
+        if [[ $GITHUB_REF == refs/tags/v* ]]; then
+          # メジャーバージョン（手動タグ）
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "type=major" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "filename=MoreRolesInPolus-$VERSION.zip" >> $GITHUB_OUTPUT
+          echo "release_name=Release $VERSION" >> $GITHUB_OUTPUT
+        else
+          # Snapshot（自動タグ生成）
+          DATE=$(date -u +"%Y.%m.%d")
+          
+          # 今日の既存タグを取得してサフィックスを決定
+          EXISTING_TAGS=$(git tag -l "${DATE}*" | wc -l)
+          
+          if [ $EXISTING_TAGS -eq 0 ]; then
+            SUFFIX="a"
+          else
+            # a, b, c... を計算
+            LAST_CHAR=$(printf "\x$(printf %x $((97 + $EXISTING_TAGS)))")
+            SUFFIX=$LAST_CHAR
+          fi
+          
+          VERSION="${DATE}${SUFFIX}"
+          echo "type=snapshot" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "filename=MoreRolesInPolus-$VERSION.zip" >> $GITHUB_OUTPUT
+          echo "release_name=Snapshot $VERSION" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Create Snapshot Tag
+      if: steps.version.outputs.type == 'snapshot'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag ${{ steps.version.outputs.version }}
+        git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} ${{ steps.version.outputs.version }}
+    
+    - name: Create ZIP from source
+      run: |
+        cd MoreRolesInPolus
+        zip -r ../${{ steps.version.outputs.filename }} .
+    
+    - name: Get commit message
+      id: commit
+      run: |
+        MESSAGE=$(git log -1 --pretty=%B)
+        echo "message<<EOF" >> $GITHUB_OUTPUT
+        echo "$MESSAGE" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ${{ steps.version.outputs.filename }}
+        tag_name: ${{ steps.version.outputs.version }}
+        name: ${{ steps.version.outputs.release_name }}
+        body: ${{ steps.commit.outputs.message }}
+        draft: false
+        prerelease: ${{ steps.version.outputs.type == 'snapshot' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
