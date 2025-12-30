@@ -36,7 +36,7 @@ jobs:
         FILENAME="Snapshot_${DATE}${SUFFIX}"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "filename=MoreRolesInPolus-$FILENAME.zip" >> $GITHUB_OUTPUT
-        echo "release_name=$VERSION" >> $GITHUB_OUTPUT
+        echo "release_name=MoreRolesInPolus-$FILENAME" >> $GITHUB_OUTPUT
     
     - name: Create Tag
       env:
