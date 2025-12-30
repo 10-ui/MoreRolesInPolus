@@ -5,7 +5,7 @@ using Virial.Events.Game.Meeting;
 using Virial.Events.Player;
 using Virial.Game;
 
-namespace Scripts.Roles.Modifier;
+namespace MoreRolesInPolus.Roles.Modifier;
 
 public class Spoiler : DefinedAllocatableModifierTemplate, DefinedAllocatableModifier
 {

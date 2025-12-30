@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Start": {
+      "commandName": "Project",
+      "commandLineArgs": "5"
+    },
+    "local": {
+      "commandName": "Project",
+      "commandLineArgs": "1"
+    }
+  }
+}

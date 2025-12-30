@@ -1,5 +1,5 @@
 ﻿
-namespace Toa.Scripts.Roles.Crewmate;
+namespace MoreRolesInPolus.Roles.Crewmate;
 
 public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, DefinedRole
 {
