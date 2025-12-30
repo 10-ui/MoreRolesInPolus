@@ -90,63 +90,74 @@ Visual Studio で `Ctrl+Shift+B` でビルド。
 ### Git ワークフロー
 
 ```
-feature/xxx ──┐
-              ├─→ main ─→ release
-              │   (統合)   (リリース)
+feature/researcher ──┐
+feature/anchor ──────┼→ develop ─→ main
+                     │  (結合テスト) (安定版)
+                        ↓         ↓
+                    Snapshot   Major
 ```
 
-1. **機能開発**: `feature/役職名` ブランチで開発
+#### ブランチの役割
 
-   ```bash
-   git checkout -b feature/researcher
-   ```
+- **feature/xxx**: 個別の役職開発
+- **develop**: 結合テスト・統合（Snapshotリリース）
+- **main**: テスト済みの安定版（メジャーリリース）
 
-2. **統合**: `main` ブランチにマージ
+#### 開発フロー
 
-   ```bash
-   git checkout main
-   git merge feature/researcher
-   ```
+**1. 機能開発:**
+```bash
+git checkout -b feature/researcher
+# 開発...
+git push origin feature/researcher
+```
 
-3. **リリース**: `main` → `release` にプッシュ
-   ```bash
-   git checkout release
-   git merge main
-   git push origin release
-   ```
+**2. 結合テスト（develop）:**
+```bash
+# GitHubでPR作成: feature/researcher → develop
+# マージすると自動で Snapshot 2025.12.30a リリース
+```
+
+**3. テスト・確認:**
+- Among Us で Snapshot版をテスト
+- 問題あれば修正して再度develop にマージ
+
+**4. 安定版リリース（main）:**
+```bash
+# GitHubでPR作成: develop → main
+# PRタイトルに v1.0.0 を含める
+# 例: "v1.0.0: 初回リリース"
+# マージすると自動で v1.0.0 リリース
+```
 
 ### リリース方法
 
-#### Snapshot（開発版）
+#### Snapshot（開発版）- 自動
 
-`release` ブランチに**タグなし**でプッシュ：
+`develop` ブランチへのマージで**自動的にリリース**：
 
-```bash
-git push origin release
+1. feature → develop のPRをマージ
+2. 自動で `2025.12.30a` タグ作成
+3. `MoreRolesInPolus-2025.12.30a.zip` がリリース（Pre-release）
+
+#### メジャーバージョン（正式版）- PRタイトルで判定
+
+`main` ブランチへのマージで**PRタイトルにバージョン番号があればリリース**：
+
+**PRタイトルの例:**
+
+```
+✅ "v1.0.0: 初回リリース" → v1.0.0 リリース
+✅ "v1.2.3: 新役職追加" → v1.2.3 リリース
+❌ "バグ修正" → リリースされない
 ```
 
-→ 自動で `2025.12.30a` タグが作成され、`MoreRolesInPolus-2025.12.30a.zip` がリリースされます
+**手順:**
 
-#### メジャーバージョン（正式版）
-
-タグを付けてプッシュ：
-
-**VS Studio:**
-
-1. **表示** → **Git リポジトリ** (`Ctrl+0, Ctrl+R`)
-2. 右側のコミット履歴で最新コミットを**右クリック**
-3. **新しいタグ** → `v1.0.0` と入力
-4. プッシュ時に**タグをプッシュ**にチェック
-
-**コマンドライン:**
-
-```bash
-git tag v1.0.0
-git push origin release
-git push origin v1.0.0
-```
-
-→ `MoreRolesInPolus-v1.0.0.zip` がリリースされます
+1. develop → main のPRを作成
+2. **PRタイトルに `v1.0.0` を含める**
+3. PRをマージ
+4. 自動で `v1.0.0` タグ作成 + `MoreRolesInPolus-v1.0.0.zip` リリース
 
 ### リリースの確認
 
