@@ -132,32 +132,60 @@ git push origin feature/researcher
 
 ### リリース方法
 
-#### Snapshot（開発版）- 自動
+#### 自動リリースの仕組み
 
-`develop` ブランチへのマージで**自動的にリリース**：
+| 項目 | Snapshot（開発版） | Major（正式版） |
+|------|-------------------|----------------|
+| **トリガー** | `develop` へpush | `main` へPRマージ |
+| **条件** | `MoreRolesInPolus/**` 変更時のみ | `MoreRolesInPolus/**` 変更時のみ |
+| **タグ形式** | `s,Snapshot_25.12.30a` | `v,v1.0.0` |
+| **リリース名** | `MoreRolesInPolus-Snapshot_25.12.30a` | `MoreRolesInPolus-v1.0.0` |
+| **ファイル名** | `MoreRolesInPolus-Snapshot_25.12.30a.zip` | `MoreRolesInPolus-v1.0.0.zip` |
+| **Latest** | ✅ Yes | ✅ Yes |
+| **Pre-release** | ❌ No | ❌ No |
 
-1. feature → develop のPRをマージ
-2. 自動で `s,Snapshot_25.12.30a` タグ作成
-3. `MoreRolesInPolus-s,Snapshot_25.12.30a.zip` がリリース（Pre-release、Latest）
+> ⚠️ **重要**: `.csproj` や `README.md` などの変更のみでは自動リリースは**発動しません**。  
+> `MoreRolesInPolus/` フォルダ内のコード変更時のみリリースが作成されます。
 
-#### メジャーバージョン（正式版）- PRタイトルで判定
+#### Snapshot（開発版）リリース
 
-`main` ブランチへのマージで**PRタイトルにバージョン番号があればリリース**：
+**自動で作成されます：**
 
-**PRタイトルの例:**
+1. `MoreRolesInPolus/` 内のファイルを編集
+2. `develop` ブランチにpush（直接 or PRマージ）
+3. 自動で `s,Snapshot_25.12.30a` タグ + リリース作成
+   - 同日の2回目以降は `b`, `c`, `d`... とサフィックス付与
 
+**例:**
+```bash
+# Coordinator.cs を編集
+git add MoreRolesInPolus/Scripts/Roles/Imposter/Coordinator.cs
+git commit -m "feat: update Coordinator ability"
+git push origin develop
+
+# → 自動で s,Snapshot_25.12.30a リリース作成
 ```
-✅ "v1.0.0: 初回リリース" → v1.0.0 リリース
-✅ "v1.2.3: 新役職追加" → v1.2.3 リリース
-❌ "バグ修正" → リリースされない
-```
 
-**手順:**
+#### Major（正式版）リリース
 
-1. develop → main のPRを作成
-2. **PRタイトルに `v1.0.0` を含める**
-3. PRをマージ
-4. 自動で `v1.0.0` タグ作成 + `MoreRolesInPolus-v1.0.0.zip` リリース
+**PRタイトルにバージョン番号を含める：**
+
+1. `MoreRolesInPolus/` 内のファイルが変更されていることを確認
+2. `develop` → `main` のPRを作成
+3. **PRタイトルに `v1.0.0` を含める**
+   - ✅ `"v1.0.0: Initial release"`
+   - ✅ `"v1.2.3: Add new roles"`
+   - ❌ `"Bug fix"` (バージョン番号なし → リリースされない)
+4. PRをマージ
+5. 自動で `v,v1.0.0` タグ + `MoreRolesInPolus-v1.0.0.zip` リリース作成
+
+**Visual Studio からタグを作成する方法:**
+
+1. `表示` → `Git リポジトリ`
+2. 右側の `履歴` タブでコミットを右クリック
+3. `新しいタグ` を選択
+4. タグ名: `v,v1.0.0` (カンマ必須)
+5. `Git 変更` → `プッシュ` → `タグをプッシュ` にチェック
 
 ### リリースの確認
 
