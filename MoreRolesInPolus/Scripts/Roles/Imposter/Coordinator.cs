@@ -1,7 +1,8 @@
 ﻿
 namespace MoreRolesInPolus.Roles.Imposter;
 
-//レポートした人にだけ距離を通知する
+//シェイプシフターの画面で人を選んでその後マップを選択、あってればキル。間違えてもなにもなし。
+//レポートした人にだけ距離（5K！）を通知する。
 //
 public class Coodinator : DefinedSingleAbilityRoleTemplate<Coodinator.Ability>, DefinedRole
 {
