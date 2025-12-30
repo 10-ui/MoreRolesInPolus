@@ -18,7 +18,6 @@
 
 ## Researcher - Crewmate
 "role.researcher.name" : "リサーチャー"
-"role.researcher.short" : "リ"
 "role.researcher.blurb" : "真実を暴け"
 "role.researcher.short" : "リサ"
 "options.role.researcher.surveyCooldown" : "調査クールダウン"
