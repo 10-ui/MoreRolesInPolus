@@ -3,6 +3,7 @@
 #Role 
 ## Anchor - Impostor
 "role.anchor.name" : "潜望者"
+"role.anchor.short" : "潜"
 "role.anchor.blurb" : "混乱の海を航海せよ"
 "options.role.anchor.placeCoolDown" : "びっくり箱設置クールダウン"
 "options.role.anchor.cameraCoolDown" : "びっくり箱カメラクールダウン"
@@ -17,6 +18,7 @@
 
 ## Researcher - Crewmate
 "role.researcher.name" : "リサーチャー"
+"role.researcher.short" : "リ"
 "role.researcher.blurb" : "真実を暴け"
 "options.role.researcher.surveyCooldown" : "調査クールダウン"
 "options.role.researcher.surveyDuration" : "調査所要時間"
@@ -28,6 +30,7 @@
 #Modifier
 ## RedHood
 "role.redHood.name" : "赤い帽子"
+"role.redhood.short" : "赤"
 "role.redHood.blurb" : "死を欺き、復讐の時を待て"
 "options.role.redHood.assignableTeam" : "付与可能な陣営"
 "options.role.redHood.assignableTeam.crewmate" : "クルーメイトのみ"
@@ -40,6 +43,7 @@
 
 #スポイラー spoiler impostor modifier
 "role.spoiler.name" : "スポイラー"
+"role.spoiler.short" : "スポ"
 "role.spoiler.blurb" : "募集中(スポイラー)"
 "options.role.spoiler.detail" : "スポイラーはキルするとその人の役職が分かり、その役職が残り何人か判別できます<br>なお判別された人数はその時の人数であり変化しない"
 "role.spoiler.overlay" : "残り%COUNT%人"
@@ -48,6 +52,7 @@
 #アキューサー neutral
 "teams.accuser" : "アキューサー"
 "role.accuser.name" : "アキューサー"
+"role.accuser.short" : "アキュ"
 "role.accuser.blurb" : "募集中(アキューサー)"
 "options.role.accuser.detail" : "他役職を一定数推測をすることにより勝利が出来ます"
 "options.role.accuser.NumOfGuessToWinOption" : "勝利に必要な推測成功回数"
