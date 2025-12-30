@@ -171,6 +171,8 @@ namespace Toa.Scripts.Roles.Imposter
         {
             static private readonly Image placeSprite = NebulaAPI.AddonAsset.GetResource("PlaceJackInTheBoxButton.png")!.AsImage(115f)!;
             static private readonly Image cameraSprite = NebulaAPI.AddonAsset.GetResource("PlaceJackInTheBoxButton.png")!.AsImage(115f)!;
+            static private readonly Image moveRightSprite = NebulaAPI.AddonAsset.GetResource("Impostor/Anchor/ButtonRight.png")!.AsImage(115f)!;
+            static private readonly Image moveLeftSprite = NebulaAPI.AddonAsset.GetResource("Impostor/Anchor/ButtonLeft.png")!.AsImage(115f)!;
 
             private List<Jack> globalJacks = null!;
             List<Jack> localJacks = new List<Jack>();
@@ -418,7 +420,7 @@ namespace Toa.Scripts.Roles.Imposter
 
                     // 次のカメラボタン（カメラモード中のみ表示）- 左側に表示
                     var nextCameraButton = NebulaAPI.Modules.AbilityButton(this, MyPlayer, Virial.Compat.VirtualKeyInput.None,
-                        0f, "nextCamera", cameraSprite, null, _ => isInCameraMode && globalJacks != null && globalJacks.Count > 1);
+                        0f, "nextCamera", moveRightSprite, null, _ => isInCameraMode && globalJacks != null && globalJacks.Count > 1);
                     nextCameraButton.SetLabel("right");
                     nextCameraButton.Availability = (button) => isInCameraMode;
                     nextCameraButton.OnClick = (button) =>
@@ -430,7 +432,7 @@ namespace Toa.Scripts.Roles.Imposter
 
                     // 前のカメラボタン（カメラモード中のみ表示）- 右側に表示
                     var prevCameraButton = NebulaAPI.Modules.AbilityButton(this, MyPlayer, Virial.Compat.VirtualKeyInput.None,
-                        0f, "prevCamera", cameraSprite, null, _ => isInCameraMode && globalJacks != null && globalJacks.Count > 1);
+                        0f, "prevCamera", moveLeftSprite, null, _ => isInCameraMode && globalJacks != null && globalJacks.Count > 1);
                     prevCameraButton.SetLabel("left");
                     prevCameraButton.Availability = (button) => isInCameraMode;
                     prevCameraButton.OnClick = (button) =>

@@ -27,19 +27,7 @@
 "options.role.researcher.detail" : "リサーチャーは他のプレイヤーの過去の行動を調査できます。<br>ログを辿った先に見える真実は希望か、絶望か。"
 "button.label.survey" : "調査"
 
-#Modifier
-## RedHood
-"role.redHood.name" : "赤い帽子"
-"role.redhood.short" : "赤"
-"role.redHood.blurb" : "死を欺き、復讐の時を待て"
-"options.role.redHood.assignableTeam" : "付与可能な陣営"
-"options.role.redHood.assignableTeam.crewmate" : "クルーメイトのみ"
-"options.role.redHood.assignableTeam.impostor" : "インポスターのみ"
-"options.role.redHood.assignableTeam.neutral" : "第三陣営のみ"
-"options.role.redHood.assignableTeam.all" : "全陣営"
-"options.role.redHood.detail" : "敵陣営にキルされると仮死状態になります。<br>仮死中はキラーの視点で世界を見ることができます。<br>キラーの陣営の誰かが死亡すると、次の会議後に復活します。<br>キラーの陣営が全滅すると、復活せず通常の幽霊になります。"
-
-### junjun made
+### junjun Made
 
 #スポイラー spoiler impostor modifier
 "role.spoiler.name" : "スポイラー"
