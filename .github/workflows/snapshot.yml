@@ -19,10 +19,10 @@ jobs:
       id: version
       shell: bash
       run: |
-        DATE=$(date -u +"%Y.%m.%d")
+        DATE=$(date -u +"%y.%m.%d")
         
         # 今日の既存タグを取得してサフィックスを決定
-        EXISTING_TAGS=$(git tag -l "${DATE}*" | wc -l)
+        EXISTING_TAGS=$(git tag -l "Snapshot_${DATE}*" | wc -l)
         
         if [ $EXISTING_TAGS -eq 0 ]; then
           SUFFIX="a"
@@ -32,10 +32,10 @@ jobs:
           SUFFIX=$LAST_CHAR
         fi
         
-        VERSION="${DATE}${SUFFIX}"
+        VERSION="Snapshot_${DATE}${SUFFIX}"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "filename=MoreRolesInPolus-$VERSION.zip" >> $GITHUB_OUTPUT
-        echo "release_name=Snapshot $VERSION" >> $GITHUB_OUTPUT
+        echo "release_name=$VERSION" >> $GITHUB_OUTPUT
     
     - name: Create Tag
       env:
@@ -71,5 +71,6 @@ jobs:
           ${{ steps.commit.outputs.message }}
         draft: false
         prerelease: true
+        make_latest: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
