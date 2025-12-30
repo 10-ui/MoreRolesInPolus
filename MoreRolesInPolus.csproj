@@ -1,0 +1,102 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<RootNamespace>Toa</RootNamespace>
+		<TargetFramework>net10.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>12.0</LangVersion>
+		<OutputType>Library</OutputType>
+		<EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+		<EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="IgnoresAccessChecksToGenerator" Version="0.8.0">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="NebulaAPI" Version="5.6.0" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<Reference Include="$(AmongUs)\BepInEx\core\*.dll" />
+		<Reference Include="$(AmongUs)\BepInEx\interop\*.dll" />
+		<Reference Include="Nebula">
+			<HintPath>D:\Steam\steamapps\common\Among Us NoS_dev\BepInEx\nebula\Nebula.dll</HintPath>
+		</Reference>
+	</ItemGroup>
+
+	<ItemGroup>
+		<IgnoresAccessChecksTo Include="Nebula" />
+		<IgnoresAccessChecksTo Include="NebulaAPI" />
+	</ItemGroup>
+
+	<PropertyGroup>
+		<AddonRoot>$(MSBuildProjectDirectory)\MoreRolesInPolus</AddonRoot>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- IntelliSense用にファイルを含める（実際のフォルダ構造で表示） -->
+		<Compile Include="$(AddonRoot)\Scripts\**\*.cs" />
+		<Compile Include="$(AddonRoot)\*.cs" />
+		
+		<!-- リソースファイルも表示 -->
+		<None Include="$(AddonRoot)\Language\**\*.*" />
+		<None Include="$(AddonRoot)\Resources\**\*.*" />
+		<None Include="$(AddonRoot)\addon.meta" />
+		<None Include="$(AddonRoot)\Scripts\.behaviour" />
+	</ItemGroup>
+
+	<!-- Debug：NoS_devにzipのみ（開発用に[Toa]プレフィックス付き） -->
+	<Target Name="DebugBuild" AfterTargets="Build" Condition="'$(Configuration)'=='Debug'">
+		<PropertyGroup>
+			<TempZipDir>$(MSBuildProjectDirectory)\temp_zip</TempZipDir>
+			<ZipFileName>[Toa]MoreRolesInPolus.zip</ZipFileName>
+			<SteamAddonsPath>D:\Steam\steamapps\common\Among Us NoS_dev\Addons</SteamAddonsPath>
+		</PropertyGroup>
+		
+		<RemoveDir Directories="$(TempZipDir)" Condition="Exists('$(TempZipDir)')" />
+		<MakeDir Directories="$(TempZipDir)" />
+		
+		<ItemGroup>
+			<AddonFiles Include="$(AddonRoot)\**\*.*" />
+		</ItemGroup>
+		
+		<Copy SourceFiles="@(AddonFiles)" DestinationFolder="$(TempZipDir)\%(RecursiveDir)" />
+		<ZipDirectory SourceDirectory="$(TempZipDir)" DestinationFile="$(SteamAddonsPath)\$(ZipFileName)" Overwrite="true" />
+		<RemoveDir Directories="$(TempZipDir)" />
+		
+		<Message Text="Debugビルド完了: $(SteamAddonsPath)\$(ZipFileName)" Importance="high" />
+	</Target>
+
+	<!-- Release：bin\Release + NoS_dev（配布用にプレフィックスなし） -->
+	<Target Name="ReleaseBuild" AfterTargets="Build" Condition="'$(Configuration)'=='Release'">
+		<PropertyGroup>
+			<TempZipDir>$(MSBuildProjectDirectory)\temp_zip</TempZipDir>
+			<ZipFileName>MoreRolesInPolus.zip</ZipFileName>
+			<SteamAddonsPath>D:\Steam\steamapps\common\Among Us NoS_dev\Addons</SteamAddonsPath>
+			<BinReleasePath>$(MSBuildProjectDirectory)\bin\Release</BinReleasePath>
+		</PropertyGroup>
+		
+		<RemoveDir Directories="$(TempZipDir)" Condition="Exists('$(TempZipDir)')" />
+		<MakeDir Directories="$(TempZipDir)" />
+		<MakeDir Directories="$(BinReleasePath)" Condition="!Exists('$(BinReleasePath)')" />
+		
+		<ItemGroup>
+			<AddonFiles Include="$(AddonRoot)\**\*.*" />
+		</ItemGroup>
+		
+		<Copy SourceFiles="@(AddonFiles)" DestinationFolder="$(TempZipDir)\%(RecursiveDir)" />
+		
+		<!-- bin\Releaseにzip -->
+		<ZipDirectory SourceDirectory="$(TempZipDir)" DestinationFile="$(BinReleasePath)\$(ZipFileName)" Overwrite="true" />
+		<!-- NoS_devにzip -->
+		<ZipDirectory SourceDirectory="$(TempZipDir)" DestinationFile="$(SteamAddonsPath)\$(ZipFileName)" Overwrite="true" />
+		
+		<RemoveDir Directories="$(TempZipDir)" />
+		
+		<Message Text="Releaseビルド完了: $(BinReleasePath)\$(ZipFileName) と $(SteamAddonsPath)\$(ZipFileName)" Importance="high" />
+	</Target>
+
+</Project>
