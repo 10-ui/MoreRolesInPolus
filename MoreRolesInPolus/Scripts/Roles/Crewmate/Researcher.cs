@@ -7,7 +7,7 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
     {
     }
     Image? DefinedAssignable.IconImage => iconImage;
-    static readonly Image iconImage = NebulaAPI.AddonAsset.GetResource(string.Format("Crewmate/Researcher/Resarcher.png"))!.AsImage()!;
+    static readonly Image iconImage = NebulaAPI.AddonAsset.GetResource(string.Format("Crewmate/Researcher/Researcher.png"))!.AsImage()!;
 
 
     static private readonly FloatConfiguration SurveyCooldownOption = NebulaAPI.Configurations.Configuration("options.role.researcher.surveyCooldown", (0f, 60f, 2.5f), 20f, FloatConfigurationDecorator.Second);

@@ -12,6 +12,8 @@ public class Spoiler : DefinedSingleAbilityRoleTemplate<Spoiler.Ability>, Define
     private Spoiler() : base("spoiler", NebulaTeams.ImpostorTeam.Color, RoleCategory.ImpostorRole, NebulaTeams.ImpostorTeam, [])
     {
     }
+    Image? DefinedAssignable.IconImage => iconImage;
+    static readonly Image iconImage = NebulaAPI.AddonAsset.GetResource(string.Format("Impostor/Spoiler/Spoiler.png"))!.AsImage()!;
 
     static public readonly Spoiler MyRole = new();
 
