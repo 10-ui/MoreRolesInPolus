@@ -115,7 +115,7 @@ git push origin feature/researcher
 **2. 結合テスト（develop）:**
 ```bash
 # GitHubでPR作成: feature/researcher → develop
-# マージすると自動で Snapshot_25.12.30a リリース
+# マージすると自動で s,Snapshot_25.12.30a リリース
 ```
 
 **3. テスト・確認:**
@@ -137,8 +137,8 @@ git push origin feature/researcher
 `develop` ブランチへのマージで**自動的にリリース**：
 
 1. feature → develop のPRをマージ
-2. 自動で `Snapshot_25.12.30a` タグ作成
-3. `MoreRolesInPolus-Snapshot_25.12.30a.zip` がリリース（Pre-release、Latest）
+2. 自動で `s,Snapshot_25.12.30a` タグ作成
+3. `MoreRolesInPolus-s,Snapshot_25.12.30a.zip` がリリース（Pre-release、Latest）
 
 #### メジャーバージョン（正式版）- PRタイトルで判定
 
