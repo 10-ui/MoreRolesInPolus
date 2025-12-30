@@ -4,6 +4,10 @@
 # 一時ビルドフォルダ
 temp_zip/
 
+# 開発者固有の設定
+*.user
+!*.user.template
+
 # Visual Studio
 .vs/
 bin/

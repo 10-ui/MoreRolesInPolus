@@ -23,7 +23,7 @@
 		<Reference Include="$(AmongUs)\BepInEx\core\*.dll" />
 		<Reference Include="$(AmongUs)\BepInEx\interop\*.dll" />
 		<Reference Include="Nebula">
-			<HintPath>D:\Steam\steamapps\common\Among Us NoS_dev\BepInEx\nebula\Nebula.dll</HintPath>
+			<HintPath>$(AmongUs)\BepInEx\nebula\Nebula.dll</HintPath>
 		</Reference>
 	</ItemGroup>
 
@@ -53,7 +53,7 @@
 		<PropertyGroup>
 			<TempZipDir>$(MSBuildProjectDirectory)\temp_zip</TempZipDir>
 			<ZipFileName>[Toa]MoreRolesInPolus.zip</ZipFileName>
-			<SteamAddonsPath>D:\Steam\steamapps\common\Among Us NoS_dev\Addons</SteamAddonsPath>
+			<SteamAddonsPath>$(AmongUs)\Addons</SteamAddonsPath>
 		</PropertyGroup>
 		
 		<RemoveDir Directories="$(TempZipDir)" Condition="Exists('$(TempZipDir)')" />
@@ -75,7 +75,7 @@
 		<PropertyGroup>
 			<TempZipDir>$(MSBuildProjectDirectory)\temp_zip</TempZipDir>
 			<ZipFileName>MoreRolesInPolus.zip</ZipFileName>
-			<SteamAddonsPath>D:\Steam\steamapps\common\Among Us NoS_dev\Addons</SteamAddonsPath>
+			<SteamAddonsPath>$(AmongUs)\Addons</SteamAddonsPath>
 			<BinReleasePath>$(MSBuildProjectDirectory)\bin\Release</BinReleasePath>
 		</PropertyGroup>
 		
