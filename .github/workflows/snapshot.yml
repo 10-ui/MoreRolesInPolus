@@ -71,7 +71,6 @@ jobs:
           
           ${{ steps.commit.outputs.message }}
         draft: false
-        prerelease: true
-        make_latest: true
+        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

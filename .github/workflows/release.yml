@@ -33,7 +33,7 @@ jobs:
           echo "found=true" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "filename=MoreRolesInPolus-$FILENAME.zip" >> $GITHUB_OUTPUT
-          echo "release_name=$VERSION" >> $GITHUB_OUTPUT
+          echo "release_name=MoreRolesInPolus-$FILENAME" >> $GITHUB_OUTPUT
           echo "Found version: $VERSION"
         else
           echo "found=false" >> $GITHUB_OUTPUT
