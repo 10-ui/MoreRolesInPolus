@@ -54,6 +54,8 @@ namespace Toa.Scripts.Roles.Imposter
         /// 役職の情報を用意します。
         /// </summary>
         static public readonly Anchor MyRole = new();
+        AbilityAssignmentStatus DefinedRole.AssignmentStatus => AbilityAssignmentStatus.KillersSide;
+        MultipleAssignmentType DefinedRole.MultipleAssignment => MultipleAssignmentType.Allowed;
 
         [NebulaPreprocess(PreprocessPhase.PostRoles)]
         public class Jack : NebulaSyncStandardObject, IGameOperator

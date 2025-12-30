@@ -18,6 +18,7 @@
 ## Researcher - Crewmate
 "role.researcher.name" : "リサーチャー"
 "role.researcher.blurb" : "真実を暴け"
+"role.researcher.short" : "リサ"
 "options.role.researcher.surveyCooldown" : "調査クールダウン"
 "options.role.researcher.surveyDuration" : "調査所要時間"
 "options.role.researcher.surveytime" : "遡れる時間"

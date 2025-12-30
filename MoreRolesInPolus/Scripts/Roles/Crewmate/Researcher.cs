@@ -3,7 +3,7 @@ namespace Toa.Scripts.Roles.Crewmate;
 
 public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, DefinedRole
 {
-    private Researcher() : base("researcher", new(104,251,194 ), RoleCategory.CrewmateRole, NebulaTeams.CrewmateTeam, [SurveyCooldownOption, SurveyDurationOption, SurveyTimeOption, MaxSurveyOption])
+    private Researcher() : base("researcher", new(104,251,194), RoleCategory.CrewmateRole, NebulaTeams.CrewmateTeam, [SurveyCooldownOption, SurveyDurationOption, SurveyTimeOption, MaxSurveyOption])
     {
     }
     Image? DefinedAssignable.IconImage => iconImage;
@@ -33,6 +33,8 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
         int leftUses;
         private record SurveyHistory(float Time, GamePlayer Player, string Content);
         private List<SurveyHistory> InthisturnResult = [];
+
+        static private readonly Image researchSprite = NebulaAPI.AddonAsset.GetResource(string.Format("Crewmate/Researcher/ResearchButton.png"))!.AsImage(115f)!;
 
 
         string GetHistory(GamePlayer player, float from, float to)
@@ -71,7 +73,7 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
 
                 //発火ボタン
                 var surveyButton = NebulaAPI.Modules.EffectButton(this, MyPlayer, VirtualKeyInput.Ability,
-                        SurveyCooldownOption, SurveyDurationOption, "survey", null,
+                        SurveyCooldownOption, SurveyDurationOption, "survey", researchSprite,
                         _ => surveyTracker.CurrentTarget != null, _ => this.leftUses > 0);
                 if (this.leftUses < 20) surveyButton.ShowUsesIcon(4, this.leftUses.ToString());
 
