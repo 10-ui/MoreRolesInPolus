@@ -204,9 +204,39 @@ namespace Toa.Scripts.Roles.Imposter
 
                     placeButton.OnClick = (button) =>
                     {
-                        var mypos = MyPlayer.Position;
-                        var obj = NebulaSyncObject.LocalInstantiate(Jack.MyLocalTag, new float[] { mypos.x, mypos.y });
+                        // 1. プレイヤーの現在の「確実に安全な」足元位置
+                        UnityEngine.Vector2 playerPos = (UnityEngine.Vector2)PlayerControl.LocalPlayer.GetTruePosition();
+                        UnityEngine.Vector2 finalPos = playerPos;
 
+                        // 2. 周囲 0.6f にある壁をすべて取得（1.0fだと角で跳ねすぎるので0.6fがベスト）
+                        var hits = UnityEngine.Physics2D.OverlapCircleAll(playerPos, 0.6f, UnityEngine.LayerMask.GetMask("Ship", "Decls"));
+
+                        if (hits.Length > 0)
+                        {
+                            UnityEngine.Vector2 pushCorrection = UnityEngine.Vector2.zero;
+
+                            foreach (var hit in hits)
+                            {
+                                UnityEngine.Vector2 wallPoint = hit.ClosestPoint(playerPos);
+                                float dist = UnityEngine.Vector2.Distance(playerPos, wallPoint);
+
+                                // 壁に近すぎる（0.5f未満）場合
+                                if (dist < 0.5f)
+                                {
+                                    // 壁からプレイヤーに向かうベクトル（安全な方向）
+                                    UnityEngine.Vector2 escapeDir = (playerPos - wallPoint).normalized;
+
+                                    // 足りない距離分だけ「プレイヤー側」へ押し戻す
+                                    // これにより、上下左右どの壁であっても「内側」へ補正されます
+                                    pushCorrection += escapeDir * (0.5f - dist);
+                                }
+                            }
+                            finalPos += pushCorrection;
+                        }
+
+                        // 3. 設置（Z軸はTOR方式）
+                        float z = finalPos.y / 1000f + 0.01f;
+                        var obj = NebulaSyncObject.LocalInstantiate(Jack.MyLocalTag, new float[] { finalPos.x, finalPos.y });
                         localJacks.Add((obj.SyncObject as Jack)!);
 
                         left--;

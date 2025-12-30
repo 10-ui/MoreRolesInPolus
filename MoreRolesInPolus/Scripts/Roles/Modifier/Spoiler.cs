@@ -7,15 +7,17 @@ using Virial.Game;
 
 namespace Scripts.Roles.Modifier;
 
-//spoiler ƒLƒ‹‚µ‚½‘ŠŽè‚Ì–ðE‚ðŠm”F‚Å‚«‚éƒCƒ“ƒ|ƒXƒ^[—pƒ‚ƒfƒBƒtƒ@ƒCƒA
 public class Spoiler : DefinedAllocatableModifierTemplate, DefinedAllocatableModifier
 {
 
     private const string overlayKey = "role.spoiler.overlay";
-    private Spoiler() : base("Spoiler", "spoiler", new(180, 0, 0), [])
+    private Spoiler() : base("spoiler", "spoiler", new(180, 0, 0), [])
     {
 
     }
+
+    Image? DefinedAssignable.IconImage => iconImage;
+    static readonly Image iconImage = NebulaAPI.AddonAsset.GetResource(string.Format("Impostor/Spoiler/Spoiler.png"))!.AsImage()!;
 
     static public Spoiler MyRole = new Spoiler();
     RuntimeModifier RuntimeAssignableGenerator<RuntimeModifier>.CreateInstance(GamePlayer player, int[] arguments) => new Instance(player);
@@ -54,7 +56,7 @@ public class Spoiler : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
                     return nowCount == killCount && lifespan.IsAliveObject;
                 }
 
-                NebulaAPI.GUI.ShowStickerOverlay(NebulaAPI.GUI.RawText(GUIAlignment.Center, AttributeAsset.OverlayContent, targetRole.DisplayColoredName + NebulaAPI.Language.Translate(overlayKey).Replace("%COUNT%", roleCount.ToString())), ev.Player.Position, () => !Isalive(), Isalive);//•\Ž¦‚·‚é‚½‚Ñ‚ÉƒJƒEƒ“ƒ^[‘‚â‚·@‚±‚ê‚ª‰½”Ô–Ú‚©‚ÍŠo‚¦‚é@
+                NebulaAPI.GUI.ShowStickerOverlay(NebulaAPI.GUI.RawText(GUIAlignment.Center, AttributeAsset.OverlayContent, targetRole.DisplayColoredName + NebulaAPI.Language.Translate(overlayKey).Replace("%COUNT%", roleCount.ToString())), ev.Player.Position, () => !Isalive(), Isalive);//ï¿½\ï¿½ï¿½ï¿½ï¿½ï¿½é‚½ï¿½Ñ‚ÉƒJï¿½Eï¿½ï¿½ï¿½^ï¿½[ï¿½ï¿½ï¿½â‚·ï¿½@ï¿½ï¿½ï¿½ê‚ªï¿½ï¿½ï¿½Ô–Ú‚ï¿½ï¿½ÍŠoï¿½ï¿½ï¿½ï¿½@
 
 
             }
