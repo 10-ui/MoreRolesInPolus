@@ -27,11 +27,13 @@ jobs:
         
         # PRタイトルから v1.0.0 のようなバージョンを抽出
         if [[ $PR_TITLE =~ (v[0-9]+\.[0-9]+\.[0-9]+) ]]; then
-          VERSION="${BASH_REMATCH[1]}"
+          VERSION_NUM="${BASH_REMATCH[1]}"
+          VERSION="v,${VERSION_NUM}"
+          FILENAME="${VERSION_NUM}"
           echo "found=true" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "filename=MoreRolesInPolus-$VERSION.zip" >> $GITHUB_OUTPUT
-          echo "release_name=Release $VERSION" >> $GITHUB_OUTPUT
+          echo "filename=MoreRolesInPolus-$FILENAME.zip" >> $GITHUB_OUTPUT
+          echo "release_name=$VERSION" >> $GITHUB_OUTPUT
           echo "Found version: $VERSION"
         else
           echo "found=false" >> $GITHUB_OUTPUT
