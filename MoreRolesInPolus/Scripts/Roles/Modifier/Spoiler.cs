@@ -12,7 +12,7 @@ public class Spoiler : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
 {
 
     private const string overlayKey = "role.spoiler.overlay";
-    private Spoiler() : base("Spoiler", "spoiler", new(180, 0, 0), [])
+    private Spoiler() : base("spoiler", "spoiler", new(180, 0, 0), [])
     {
 
     }
