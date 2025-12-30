@@ -90,63 +90,102 @@ Visual Studio で `Ctrl+Shift+B` でビルド。
 ### Git ワークフロー
 
 ```
-feature/xxx ──┐
-              ├─→ main ─→ release
-              │   (統合)   (リリース)
+feature/researcher ──┐
+feature/anchor ──────┼→ develop ─→ main
+                     │  (結合テスト) (安定版)
+                        ↓         ↓
+                    Snapshot   Major
 ```
 
-1. **機能開発**: `feature/役職名` ブランチで開発
+#### ブランチの役割
 
-   ```bash
-   git checkout -b feature/researcher
-   ```
+- **feature/xxx**: 個別の役職開発
+- **develop**: 結合テスト・統合（Snapshotリリース）
+- **main**: テスト済みの安定版（メジャーリリース）
 
-2. **統合**: `main` ブランチにマージ
+#### 開発フロー
 
-   ```bash
-   git checkout main
-   git merge feature/researcher
-   ```
+**1. 機能開発:**
+```bash
+git checkout -b feature/researcher
+# 開発...
+git push origin feature/researcher
+```
 
-3. **リリース**: `main` → `release` にプッシュ
-   ```bash
-   git checkout release
-   git merge main
-   git push origin release
-   ```
+**2. 結合テスト（develop）:**
+```bash
+# GitHubでPR作成: feature/researcher → develop
+# マージすると自動で s,Snapshot_25.12.30a リリース
+```
+
+**3. テスト・確認:**
+- Among Us で Snapshot版をテスト
+- 問題あれば修正して再度develop にマージ
+
+**4. 安定版リリース（main）:**
+```bash
+# GitHubでPR作成: develop → main
+# PRタイトルに v1.0.0 を含める
+# 例: "v1.0.0: 初回リリース"
+# マージすると自動で v1.0.0 リリース
+```
 
 ### リリース方法
 
-#### Snapshot（開発版）
+#### 自動リリースの仕組み
 
-`release` ブランチに**タグなし**でプッシュ：
+| 項目 | Snapshot（開発版） | Major（正式版） |
+|------|-------------------|----------------|
+| **トリガー** | `develop` へpush | `main` へPRマージ |
+| **条件** | `MoreRolesInPolus/**` 変更時のみ | `MoreRolesInPolus/**` 変更時のみ |
+| **タグ形式** | `s,Snapshot_25.12.30a` | `v,v1.0.0` |
+| **リリース名** | `MoreRolesInPolus-Snapshot_25.12.30a` | `MoreRolesInPolus-v1.0.0` |
+| **ファイル名** | `MoreRolesInPolus-Snapshot_25.12.30a.zip` | `MoreRolesInPolus-v1.0.0.zip` |
+| **Latest** | ✅ Yes | ✅ Yes |
+| **Pre-release** | ❌ No | ❌ No |
 
+> ⚠️ **重要**: `.csproj` や `README.md` などの変更のみでは自動リリースは**発動しません**。  
+> `MoreRolesInPolus/` フォルダ内のコード変更時のみリリースが作成されます。
+
+#### Snapshot（開発版）リリース
+
+**自動で作成されます：**
+
+1. `MoreRolesInPolus/` 内のファイルを編集
+2. `develop` ブランチにpush（直接 or PRマージ）
+3. 自動で `s,Snapshot_25.12.30a` タグ + リリース作成
+   - 同日の2回目以降は `b`, `c`, `d`... とサフィックス付与
+
+**例:**
 ```bash
-git push origin release
+# Coordinator.cs を編集
+git add MoreRolesInPolus/Scripts/Roles/Imposter/Coordinator.cs
+git commit -m "feat: update Coordinator ability"
+git push origin develop
+
+# → 自動で s,Snapshot_25.12.30a リリース作成
 ```
 
-→ 自動で `2025.12.30a` タグが作成され、`MoreRolesInPolus-2025.12.30a.zip` がリリースされます
+#### Major（正式版）リリース
 
-#### メジャーバージョン（正式版）
+**PRタイトルにバージョン番号を含める：**
 
-タグを付けてプッシュ：
+1. `MoreRolesInPolus/` 内のファイルが変更されていることを確認
+2. `develop` → `main` のPRを作成
+3. **PRタイトルに `v1.0.0` を含める**
+   - ✅ `"v1.0.0: Initial release"`
+   - ✅ `"v1.2.3: Add new roles"`
+   - ❌ `"Bug fix"` (バージョン番号なし → リリースされない)
+4. PRをマージ
+5. 自動で `v,v1.0.0` タグ + `MoreRolesInPolus-v1.0.0.zip` リリース作成
 
-**VS Studio:**
+**Visual Studio からタグを作成する方法:**
 
-1. **表示** → **Git リポジトリ** (`Ctrl+0, Ctrl+R`)
-2. 右側のコミット履歴で最新コミットを**右クリック**
-3. **新しいタグ** → `v1.0.0` と入力
-4. プッシュ時に**タグをプッシュ**にチェック
-
-**コマンドライン:**
-
-```bash
-git tag v1.0.0
-git push origin release
-git push origin v1.0.0
-```
-
-→ `MoreRolesInPolus-v1.0.0.zip` がリリースされます
+1. `表示` → `Git リポジトリ`
+2. 右側の `履歴` タブでコミットを右クリック
+3. `新しいタグ` を選択
+4. タグ名: `v,v1.0.0` (カンマ必須)
+5. `Git 変更` → `プッシュ` → `タグをプッシュ` にチェック
 
 ### リリースの確認
 

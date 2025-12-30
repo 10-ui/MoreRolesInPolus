@@ -1,0 +1,79 @@
+name: Snapshot Release
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'MoreRolesInPolus/**'
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Generate Snapshot Version
+      id: version
+      shell: bash
+      run: |
+        DATE=$(date -u +"%y.%m.%d")
+        
+        # 今日の既存タグを取得してサフィックスを決定
+        EXISTING_TAGS=$(git tag -l "s,Snapshot_${DATE}*" | wc -l)
+        
+        if [ $EXISTING_TAGS -eq 0 ]; then
+          SUFFIX="a"
+        else
+          # a, b, c... を計算
+          LAST_CHAR=$(printf "\x$(printf %x $((97 + $EXISTING_TAGS)))")
+          SUFFIX=$LAST_CHAR
+        fi
+        
+        VERSION="s,Snapshot_${DATE}${SUFFIX}"
+        FILENAME="Snapshot_${DATE}${SUFFIX}"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "filename=MoreRolesInPolus-$FILENAME.zip" >> $GITHUB_OUTPUT
+        echo "release_name=MoreRolesInPolus-$FILENAME" >> $GITHUB_OUTPUT
+    
+    - name: Create Tag
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag ${{ steps.version.outputs.version }}
+        git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} ${{ steps.version.outputs.version }}
+    
+    - name: Create ZIP from source
+      run: |
+        cd MoreRolesInPolus
+        zip -r ../${{ steps.version.outputs.filename }} .
+    
+    - name: Get commit message
+      id: commit
+      run: |
+        MESSAGE=$(git log -1 --pretty=%B)
+        echo "message<<EOF" >> $GITHUB_OUTPUT
+        echo "$MESSAGE" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ${{ steps.version.outputs.filename }}
+        tag_name: ${{ steps.version.outputs.version }}
+        name: ${{ steps.version.outputs.release_name }}
+        body: |
+          **🔧 開発版スナップショット**
+          
+          ${{ steps.commit.outputs.message }}
+        draft: false
+        prerelease: false
+        make_latest: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

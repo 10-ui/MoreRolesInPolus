@@ -1,6 +1,6 @@
 using Nebula.Roles.Complex;
 using Virial.Runtime;
-namespace Nebula.Roles.Neutral;
+namespace MoreRolesInPolus.Roles.Neutral;
 
 [NebulaPreprocess(PreprocessPhase.BuildAssignmentTypes)]
 internal class AccuserTeamInfo

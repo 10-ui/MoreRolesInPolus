@@ -1,5 +1,5 @@
 
-namespace Scripts.Roles.Impostor;
+namespace MoreRolesInPolus.Roles.Imposter;
 
 //spoiler キルした相手の役職を確認できるインポスター役職
 //

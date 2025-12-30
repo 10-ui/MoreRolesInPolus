@@ -44,6 +44,9 @@
 		<!-- リソースファイルも表示 -->
 		<None Include="$(AddonRoot)\Language\**\*.*" />
 		<None Include="$(AddonRoot)\Resources\**\*.*" />
+		<Compile Include="D:\.dev\NebulaOnTheShipAU\MoreRolesInPolus\Start.cs" />
+		<Compile Include="MoreRolesInPolus\Scripts\Roles\Imposter\Coordinator.cs" />
+		<Compile Include="Start.cs" />
 		<None Include="$(AddonRoot)\addon.meta" />
 		<None Include="$(AddonRoot)\Scripts\.behaviour" />
 	</ItemGroup>

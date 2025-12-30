@@ -1,58 +1,49 @@
-name: Release Build
+name: Major Release
 
 on:
-  push:
+  pull_request:
+    types: [closed]
     branches:
-      - release
-    tags:
-      - 'v*.*.*'
+      - main
+    paths:
+      - 'MoreRolesInPolus/**'
 
 jobs:
   release:
+    # PRがマージされた場合のみ実行
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # タグ履歴を取得
+        fetch-depth: 0
     
-    - name: Determine Release Type and Version
+    - name: Extract Version from PR Title
       id: version
       shell: bash
       run: |
-        # 手動タグがpushされたかチェック
-        if [[ $GITHUB_REF == refs/tags/v* ]]; then
-          # メジャーバージョン（手動タグ）
-          VERSION=${GITHUB_REF#refs/tags/}
-          echo "type=major" >> $GITHUB_OUTPUT
+        PR_TITLE="${{ github.event.pull_request.title }}"
+        echo "PR Title: $PR_TITLE"
+        
+        # PRタイトルから v1.0.0 のようなバージョンを抽出
+        if [[ $PR_TITLE =~ (v[0-9]+\.[0-9]+\.[0-9]+) ]]; then
+          VERSION_NUM="${BASH_REMATCH[1]}"
+          VERSION="v,${VERSION_NUM}"
+          FILENAME="${VERSION_NUM}"
+          echo "found=true" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "filename=MoreRolesInPolus-$VERSION.zip" >> $GITHUB_OUTPUT
-          echo "release_name=Release $VERSION" >> $GITHUB_OUTPUT
+          echo "filename=MoreRolesInPolus-$FILENAME.zip" >> $GITHUB_OUTPUT
+          echo "release_name=MoreRolesInPolus-$FILENAME" >> $GITHUB_OUTPUT
+          echo "Found version: $VERSION"
         else
-          # Snapshot（自動タグ生成）
-          DATE=$(date -u +"%Y.%m.%d")
-          
-          # 今日の既存タグを取得してサフィックスを決定
-          EXISTING_TAGS=$(git tag -l "${DATE}*" | wc -l)
-          
-          if [ $EXISTING_TAGS -eq 0 ]; then
-            SUFFIX="a"
-          else
-            # a, b, c... を計算
-            LAST_CHAR=$(printf "\x$(printf %x $((97 + $EXISTING_TAGS)))")
-            SUFFIX=$LAST_CHAR
-          fi
-          
-          VERSION="${DATE}${SUFFIX}"
-          echo "type=snapshot" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "filename=MoreRolesInPolus-$VERSION.zip" >> $GITHUB_OUTPUT
-          echo "release_name=Snapshot $VERSION" >> $GITHUB_OUTPUT
+          echo "found=false" >> $GITHUB_OUTPUT
+          echo "No version found in PR title"
         fi
     
-    - name: Create Snapshot Tag
-      if: steps.version.outputs.type == 'snapshot'
+    - name: Create Tag
+      if: steps.version.outputs.found == 'true'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
@@ -62,26 +53,30 @@ jobs:
         git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} ${{ steps.version.outputs.version }}
     
     - name: Create ZIP from source
+      if: steps.version.outputs.found == 'true'
       run: |
         cd MoreRolesInPolus
         zip -r ../${{ steps.version.outputs.filename }} .
     
-    - name: Get commit message
-      id: commit
+    - name: Get PR body
+      if: steps.version.outputs.found == 'true'
+      id: pr_body
       run: |
-        MESSAGE=$(git log -1 --pretty=%B)
-        echo "message<<EOF" >> $GITHUB_OUTPUT
-        echo "$MESSAGE" >> $GITHUB_OUTPUT
+        BODY="${{ github.event.pull_request.body }}"
+        echo "body<<EOF" >> $GITHUB_OUTPUT
+        echo "$BODY" >> $GITHUB_OUTPUT
         echo "EOF" >> $GITHUB_OUTPUT
     
     - name: Create Release
+      if: steps.version.outputs.found == 'true'
       uses: softprops/action-gh-release@v1
       with:
         files: ${{ steps.version.outputs.filename }}
         tag_name: ${{ steps.version.outputs.version }}
         name: ${{ steps.version.outputs.release_name }}
-        body: ${{ steps.commit.outputs.message }}
+        body: ${{ steps.pr_body.outputs.body }}
         draft: false
-        prerelease: ${{ steps.version.outputs.type == 'snapshot' }}
+        prerelease: false
+        make_latest: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
