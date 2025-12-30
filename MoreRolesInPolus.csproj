@@ -68,6 +68,10 @@
 		<RemoveDir Directories="$(TempZipDir)" />
 		
 		<Message Text="Debugビルド完了: $(SteamAddonsPath)\$(ZipFileName)" Importance="high" />
+		
+		<!-- Among Us を起動 -->
+		<Exec Command="start &quot;&quot; &quot;$(AmongUs)\Among Us.exe&quot;" />
+		<Message Text="Among Us を起動しました" Importance="high" />
 	</Target>
 
 	<!-- Release：bin\Release + NoS_dev（配布用にプレフィックスなし） -->
