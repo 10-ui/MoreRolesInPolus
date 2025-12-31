@@ -134,7 +134,7 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
 
                 UnityEngine.Vector2 pos = gplayer.TruePosition;
 
-                var roomResult = NebulaAPI.CurrentGame.CurrentMap.GetRoomName(pos, false, false);
+                var roomResult = NebulaAPI.CurrentGame.CurrentMap.GetRoomName(pos, false, false, false);
 
                 byte id = gplayer.PlayerId;
 
