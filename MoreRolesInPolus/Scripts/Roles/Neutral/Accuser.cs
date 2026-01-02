@@ -1,4 +1,5 @@
 using Nebula.Roles.Complex;
+using UnityEngine.UIElements.Experimental;
 using Virial.Runtime;
 namespace MoreRolesInPolus.Roles.Neutral;
 
@@ -27,6 +28,10 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
     static private IntegerConfiguration NumOfGuessToWinOption = NebulaAPI.Configurations.Configuration("options.role.accuser.NumOfGuessToWinOption", (1, 10), 2);
     // 一回の会議で何回推測できるか
     static private IntegerConfiguration NumOfGuessPerMeetingOption = NebulaAPI.Configurations.Configuration("options.role.accuser.numOfGuessPerMeeting", (1, 10), 1);
+
+    static private readonly BoolConfiguration GetLongTaskHintOption = NebulaAPI.Configurations.Configuration("options.role.accuser.GetLongTaskHintOption", false);
+
+    static private IntegerConfiguration NumOfLongTaskOption = NebulaAPI.Configurations.Configuration("options.role.accuser.NumOfLongTaskOption", (1, 10), 3);
 
     static public Accuser MyRole = new Accuser();
     // 統計：推測した回数
@@ -78,7 +83,7 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
                     // 推測ウィンドウを開く
                     lastGuesserWindow = OpenGuessWindow(leftGuessPerMeeting, leftGuess, (r) =>
                     {
-                        
+
                         if (PlayerControl.LocalPlayer.Data.IsDead) return;
                         if (!(MeetingHud.Instance.state == MeetingHud.VoteStates.Voted || MeetingHud.Instance.state == MeetingHud.VoteStates.NotVoted)) return;
                         if (!MeetingHudExtension.CanUseAbilityFor(p, true)) return;
@@ -86,7 +91,7 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
                         // 統計：推測回数を記録
                         StatsGuess.Progress();
                         // 推測が正しいかチェック
-                        bool isCorrect = p.Role.ExternalRecognitionRole == r;
+                        bool isCorrect = p.Role.CheckGuessAbility(r);
 
                         if (isCorrect)
                         {
@@ -151,8 +156,55 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
             }
         }
 
+        private List<DefinedRole> GetRoleHints(GamePlayer targetPlayer)
+        {
+            List<DefinedRole> hints = new();
+
+            hints.Add(targetPlayer.Role.Role);
+
+            HashSet<DefinedRole> possibleRoles = new();
+
+            return hints;
+
+
+        }
+
+
+        void setAccuserTask()
+        {
+            if (AmOwner && GetLongTaskHintOption)
+            {
+                int NumOfLongTask = NumOfLongTaskOption;
+
+                using (RPCRouter.CreateSection("AccuserTask"))
+                {
+
+                    MyPlayer.Tasks.Unbox().ReplaceTasksAndRecompute(0, NumOfLongTask, 0);
+                    MyPlayer.Tasks.Unbox().BecomeToOutsider();
+
+                }
+            }
+
+        }
+
+
+        //役職のヒントを取得する
+
         public void OnActivated()
         {
+        }
+        public void OnGameStart(GameStartEvent ev)
+        {
+            if (GetLongTaskHintOption) setAccuserTask();
+        }
+
+        [OnlyMyPlayer]
+        public void OnTaskCompleted(PlayerTaskCompleteLocalEvent ev)
+        {
+            if (GetLongTaskHintOption && MyPlayer.Tasks.CurrentCompleted >= 3)
+            {
+                NebulaAPI.CurrentGame?.GetModule<TitleShower>()?.SetText("タスクfinish", new(100, 100, 100), 5.5f, true);
+            }
         }
     }
 }
