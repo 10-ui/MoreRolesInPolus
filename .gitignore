@@ -8,6 +8,9 @@ temp_zip/
 *.user
 !*.user.template
 
+# 開発者ごとのcsprojファイル（baseファイルからコピーして使う）
+MoreRolesInPolus.csproj
+
 # Visual Studio
 .vs/
 bin/

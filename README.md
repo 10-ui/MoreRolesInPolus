@@ -55,37 +55,88 @@ Nebula on the Ship 用アドオン MOD。
 
 ```
 MoreRolesInPolus/
-├── MoreRolesInPolus/          # ソースコード（.cs, リソースファイル）
-│   ├── Scripts/              # 役職・ロジック実装
-│   ├── Language/             # 言語ファイル
-│   ├── Resources/            # 画像・アセット
-│   └── addon.meta            # アドオン設定
-├── MoreRolesInPolus.csproj   # プロジェクトファイル
-├── MoreRolesInPolus.sln      # ソリューション
-└── .github/workflows/        # GitHub Actions（自動リリース）
+├── MoreRolesInPolus/             # ソースコード（.cs, リソースファイル）
+│   ├── Scripts/                 # 役職・ロジック実装
+│   ├── Language/                # 言語ファイル
+│   ├── Resources/               # 画像・アセット
+│   └── addon.meta               # アドオン設定
+├── MoreRolesInPolus.csproj.base # プロジェクトファイル（テンプレート）
+├── MoreRolesInPolus.csproj      # 各自コピーして使う（Git管理外）
+├── MoreRolesInPolus.sln         # ソリューション
+└── .github/workflows/           # GitHub Actions（自動リリース）
 ```
 
-### 初期設定
+### 初期セットアップ（必須）
 
-**Among Us のパスを設定：**
+#### 1. リポジトリのクローン
 
-1. `Directory.Build.props.user.template` を `Directory.Build.props.user` にコピー
-2. `Directory.Build.props.user` を開いて、Among Us のインストールパスを修正：
-   ```xml
-   <AmongUs>あなたのパス\Among Us NoS_dev</AmongUs>
-   ```
-3. VS Studio を再起動
+```powershell
+git clone https://github.com/10-ui/MoreRolesInPolus.git
+cd MoreRolesInPolus
+```
 
-> `Directory.Build.props.user` は Git 管理されないので、各開発者が自分の環境に合わせて作成してください
+#### 2. プロジェクトファイルのコピー
+
+```powershell
+# PowerShell
+Copy-Item MoreRolesInPolus.csproj.base MoreRolesInPolus.csproj
+```
+
+または手動で `MoreRolesInPolus.csproj.base` を `MoreRolesInPolus.csproj` にコピー。
+
+#### 3. 環境変数の設定
+
+Windows の環境変数に `AmongUs` を追加：
+
+1. **システムのプロパティ** → **環境変数**
+2. **ユーザー環境変数** に追加：
+   - 変数名: `AmongUs`
+   - 変数値: `D:\Steam\steamapps\common\Among Us NoS_dev` （あなたのパス）
+
+#### 4. Visual Studio で開く
+
+1. `MoreRolesInPolus.sln` を開く
+2. ソリューション エクスプローラーにソースコードが表示されることを確認
+3. **ビルド → ソリューションのビルド（Ctrl+Shift+B）** で初回ビルド
+
+> ⚠️ **重要**: 
+> - `MoreRolesInPolus.csproj` は Git 管理外（各自の環境で作成）
+> - `.csproj.base` をカスタマイズしたい場合は、**必ず `.csproj` を編集**してください
+> - `.csproj.base` は共通テンプレートなので、個人的な変更は加えないこと
 
 ### ビルド方法
 
 Visual Studio で `Ctrl+Shift+B` でビルド。
 
 - **Debug**: `Among Us NoS_dev\Addons\[Toa]MoreRolesInPolus.zip` に出力（開発用）
+  - ビルド後、自動で Among Us が起動します
+  - 起動数を変えたい場合: `dotnet build -c Debug /p:LaunchCount=2`
+  - 起動しない場合: `dotnet build -c Debug /p:LaunchCount=0`
 - **Release**: `bin\Release\MoreRolesInPolus.zip` + Among Us フォルダに出力（配布用）
 
-> ⚠️ F5（デバッグ実行）ではなく、**ビルド（Ctrl+Shift+B）のみ**使用してください
+> ⚠️ **F5（デバッグ実行）ではなく、ビルド（Ctrl+Shift+B）のみ使用してください**
+
+### トラブルシューティング
+
+#### ビルドエラー: 「Among Us のパスが見つかりません」
+
+- 環境変数 `AmongUs` が正しく設定されているか確認
+- Visual Studio を**再起動**（環境変数の変更を反映）
+
+#### API 参照エラー（`GetRoomName` など）
+
+NebulaAPI（NuGet）と Nebula.dll（ゲーム内）のバージョンが異なる場合があります。
+
+**対処法**: リフレクションで動的に呼び出す
+
+```csharp
+using System.Reflection;
+
+var map = NebulaAPI.CurrentGame.CurrentMap;
+var method = map.GetType().GetMethod("GetRoomName", 
+    new[] { typeof(Vector2), typeof(bool), typeof(bool), typeof(bool) });
+var result = (string?)method?.Invoke(map, new object[] { pos, false, false, false });
+```
 
 ### Git ワークフロー
 

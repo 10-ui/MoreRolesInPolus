@@ -34,28 +34,24 @@
 
 	<PropertyGroup>
 		<AddonRoot>$(MSBuildProjectDirectory)\MoreRolesInPolus</AddonRoot>
+		<!-- Debugビルド時のAmong Us起動回数（デフォルト：1） -->
+		<LaunchCount Condition="'$(LaunchCount)' == ''">1</LaunchCount>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<!-- IntelliSense用にファイルを含める（実際のフォルダ構造で表示） -->
+		<!-- IntelliSense用 -->
 		<Compile Include="$(AddonRoot)\Scripts\**\*.cs" />
 		<Compile Include="$(AddonRoot)\*.cs" />
-		
-		<!-- リソースファイルも表示 -->
-		<None Include="$(AddonRoot)\Language\**\*.*" />
-		<None Include="$(AddonRoot)\Resources\**\*.*" />
-		<Compile Include="D:\.dev\NebulaOnTheShipAU\MoreRolesInPolus\Start.cs" />
-		<Compile Include="MoreRolesInPolus\Scripts\Roles\Imposter\Coordinator.cs" />
-		<Compile Include="Start.cs" />
-		<None Include="$(AddonRoot)\addon.meta" />
-		<None Include="$(AddonRoot)\Scripts\.behaviour" />
+
+		<!-- 表示用 -->
+		<None Include="$(AddonRoot)\**\*.*" Exclude="$(AddonRoot)\**\*.cs" />
 	</ItemGroup>
 
-	<!-- Debug：NoS_devにzipのみ（開発用に[Toa]プレフィックス付き） -->
+	<!-- Debug：mod開発用ファイルにzip作成+1回起動 -->
 	<Target Name="DebugBuild" AfterTargets="Build" Condition="'$(Configuration)'=='Debug'">
 		<PropertyGroup>
 			<TempZipDir>$(MSBuildProjectDirectory)\temp_zip</TempZipDir>
-			<ZipFileName>[Toa]MoreRolesInPolus.zip</ZipFileName>
+			<ZipFileName>[junjun]MoreRolesInPolus.zip</ZipFileName>
 			<SteamAddonsPath>$(AmongUs)\Addons</SteamAddonsPath>
 		</PropertyGroup>
 		
@@ -72,9 +68,12 @@
 		
 		<Message Text="Debugビルド完了: $(SteamAddonsPath)\$(ZipFileName)" Importance="high" />
 		
-		<!-- Among Us を起動 -->
-		<Exec Command="start &quot;&quot; &quot;$(AmongUs)\Among Us.exe&quot;" />
-		<Message Text="Among Us を起動しました" Importance="high" />
+		<!-- Among Us を起動（LaunchCount回） -->
+		<PropertyGroup>
+			<Counter>1</Counter>
+		</PropertyGroup>
+		<Exec Command="powershell -Command &quot;1..$(LaunchCount) | ForEach-Object { Start-Process '$(AmongUs)\Among Us.exe' }&quot;" />
+		<Message Text="Among Us を $(LaunchCount) 回起動しました" Importance="high" />
 	</Target>
 
 	<!-- Release：bin\Release + NoS_dev（配布用にプレフィックスなし） -->
