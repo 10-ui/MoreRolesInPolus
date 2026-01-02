@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using Il2CppInterop.Runtime.InteropTypes;
-using Toa.Scripts.Roles.Imposter;
 using Virial.Assignable;
 using UnityEngine;
 
