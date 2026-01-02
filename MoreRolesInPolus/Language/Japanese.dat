@@ -27,6 +27,16 @@
 "options.role.researcher.detail" : "リサーチャーは他のプレイヤーの過去の行動を調査できます。<br>ログを辿った先に見える真実は希望か、絶望か。"
 "button.label.survey" : "調査"
 
+## Coordinator - Impostor
+"role.coordinator.name" : "コーディネーター"
+"role.coordinator.short" : "座標"
+"role.coordinator.blurb" : "座標を読み解け"
+"options.role.coordinator.coordinateCoolDown" : "座標特定クールダウン"
+"options.role.coordinator.detail" : "プレイヤーを選択し、その人がいる部屋を推測してキルします。<br>正解すればキル成功、不正解なら何も起こりません。"
+"button.label.coordinate" : "座標特定"
+"coordinator.selectPlayer" : "ターゲットを選択"
+"coordinator.selectRoom" : "部屋を選択"
+
 ### junjun Made
 
 #スポイラー spoiler impostor modifier
