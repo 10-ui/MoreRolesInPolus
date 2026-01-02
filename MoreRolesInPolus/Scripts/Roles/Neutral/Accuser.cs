@@ -24,22 +24,24 @@ internal class AccuserTeamInfo
 // 例えば生きてる人全員に一回触れる(クールタイムなどはなしただ触れるだけもしくはクリックするだけ)
 internal class Accuser : DefinedRoleTemplate, DefinedRole
 {
-    // 何回推測成功したら勝ちか
-    static private IntegerConfiguration NumOfGuessToWinOption = NebulaAPI.Configurations.Configuration("options.role.accuser.NumOfGuessToWinOption", (1, 10), 2);
-    // 一回の会議で何回推測できるか
-    static private IntegerConfiguration NumOfGuessPerMeetingOption = NebulaAPI.Configurations.Configuration("options.role.accuser.numOfGuessPerMeeting", (1, 10), 1);
 
-    static private readonly BoolConfiguration GetLongTaskHintOption = NebulaAPI.Configurations.Configuration("options.role.accuser.GetLongTaskHintOption", false);
-
-    static private IntegerConfiguration NumOfLongTaskOption = NebulaAPI.Configurations.Configuration("options.role.accuser.NumOfLongTaskOption", (1, 10), 3);
-
-    static public Accuser MyRole = new Accuser();
-    // 統計：推測した回数
-    static private GameStatsEntry StatsGuess = NebulaAPI.CreateStatsEntry("stats.accuser.guess", GameStatsCategory.Roles, MyRole);
-
-    private Accuser() : base("accuser", AccuserTeamInfo.TeamColor, RoleCategory.NeutralRole, AccuserTeamInfo.MyTeam, [NumOfGuessToWinOption, NumOfGuessPerMeetingOption])
+    private Accuser() : base("accuser", AccuserTeamInfo.TeamColor, RoleCategory.NeutralRole, AccuserTeamInfo.MyTeam, [NumOfGuessToWinOption, NumOfGuessPerMeetingOption, GetLongTaskHintOption, NumOfLongTaskOption, MaxAccuserHint, NumOfCandidatesOption])
     {
     }
+
+    Image? DefinedAssignable.IconImage => researchSprite;
+    static private readonly Image researchSprite = NebulaAPI.AddonAsset.GetResource(string.Format("Crewmate/Researcher/ResearchButton.png"))!.AsImage(115f)!;
+
+    static private IntegerConfiguration NumOfGuessToWinOption = NebulaAPI.Configurations.Configuration("options.role.accuser.NumOfGuessToWinOption", (1, 10), 2);
+    static private IntegerConfiguration NumOfGuessPerMeetingOption = NebulaAPI.Configurations.Configuration("options.role.accuser.numOfGuessPerMeeting", (1, 10), 1);
+    static private BoolConfiguration GetLongTaskHintOption = NebulaAPI.Configurations.Configuration("options.role.accuser.GetLongTaskHintOption", true);
+    static private IntegerConfiguration NumOfLongTaskOption = NebulaAPI.Configurations.Configuration("options.role.accuser.NumOfLongTaskOption", (1, 10), 3);
+    static private IntegerConfiguration MaxAccuserHint = NebulaAPI.Configurations.Configuration("options.role.accuser.MaxAccuserHint", (1, 10), 2);
+    static private IntegerConfiguration NumOfCandidatesOption = NebulaAPI.Configurations.Configuration("options.role.accuser.NumOfCandidatesOption", (1, 5), 3);
+    static public Accuser MyRole = new Accuser();
+
+    // 統計：推測した回数
+    static private GameStatsEntry StatsGuess = NebulaAPI.CreateStatsEntry("stats.accuser.guess", GameStatsCategory.Roles, MyRole);
 
     RuntimeRole RuntimeAssignableGenerator<RuntimeRole>.CreateInstance(GamePlayer player, int[] arguments) => new Instance(player, arguments);
 
@@ -50,6 +52,12 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
         private int leftGuess;
         // 勝利に必要な推測成功回数（初期値)
         private int totalGuesses;
+        //hintを入手するためのlongタスク数
+        int NumOfLongTask = NumOfLongTaskOption;
+        //hintの最大回数
+        int maxhint;
+        //入手したヒントの回数
+        private int leftHint = 0;
         // 推測ウィンドウの参照
         private MetaScreen? lastGuesserWindow = null;
 
@@ -156,37 +164,37 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
             }
         }
 
-        private List<DefinedRole> GetRoleHints(GamePlayer targetPlayer)
-        {
-            List<DefinedRole> hints = new();
+        //private List<DefinedRole> GetRoleHints(GamePlayer targetPlayer)
+        //{
+        //    List<DefinedRole> hints = new();
 
-            hints.Add(targetPlayer.Role.Role);
+        //    hints.Add(targetPlayer.Role.Role);
 
-            HashSet<DefinedRole> possibleRoles = new();
-
-            return hints;
+        //    HashSet<DefinedRole> possibleRoles = new();
 
 
-        }
+
+        //}
 
 
         void setAccuserTask()
         {
             if (AmOwner && GetLongTaskHintOption)
             {
-                int NumOfLongTask = NumOfLongTaskOption;
 
                 using (RPCRouter.CreateSection("AccuserTask"))
                 {
 
                     MyPlayer.Tasks.Unbox().ReplaceTasksAndRecompute(0, NumOfLongTask, 0);
                     MyPlayer.Tasks.Unbox().BecomeToOutsider();
+                    
 
                 }
             }
 
         }
 
+        RoleTaskType RuntimeRole.TaskType => RoleTaskType.RoleTask;
 
         //役職のヒントを取得する
 
@@ -201,9 +209,37 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
         [OnlyMyPlayer]
         public void OnTaskCompleted(PlayerTaskCompleteLocalEvent ev)
         {
-            if (GetLongTaskHintOption && MyPlayer.Tasks.CurrentCompleted >= 3)
+            if (GetLongTaskHintOption && MyPlayer.Tasks.CurrentCompleted >= NumOfLongTaskOption)
             {
-                NebulaAPI.CurrentGame?.GetModule<TitleShower>()?.SetText("タスクfinish", new(100, 100, 100), 5.5f, true);
+                //NebulaAPI.CurrentGame?.GetModule<TitleShower>()?.SetText("finish : " + , new(100, 100, 100), 5.5f, true);
+
+                leftHint++;
+                maxhint++;
+                GetHintButton();
+
+                if(maxhint <= MaxAccuserHint - 1)
+                {
+                    MyPlayer.Tasks.Unbox().ReplaceTasksAndRecompute(0, NumOfLongTask, 0);
+                }
+            }
+        }
+
+        private void GetHintButton()
+        {
+            if (leftHint > 0)
+            {
+                var playerTracker = NebulaAPI.Modules.PlayerTracker(this, MyPlayer);
+                var hintButton = NebulaAPI.Modules.EffectButton(this, MyPlayer, VirtualKeyInput.Ability,
+                        1f, 0f, "accuser_hint", researchSprite,
+                        _ => playerTracker.CurrentTarget != null, _ => leftHint > 0);
+                hintButton.ShowUsesIcon(3, leftHint.ToString());
+                hintButton.OnClick = (Button) =>
+                {
+                    var target = playerTracker.CurrentTarget;
+                    String targetRoleName = playerTracker.CurrentTarget.Role.DisplayColoredName;
+                    NebulaAPI.CurrentGame?.GetModule<TitleShower>()?.SetText(targetRoleName, new(100, 100, 100), 5.5f, true);
+                    leftHint--;
+                };
             }
         }
     }
