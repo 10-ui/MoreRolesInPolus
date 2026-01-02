@@ -86,7 +86,7 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
                         // 統計：推測回数を記録
                         StatsGuess.Progress();
                         // 推測が正しいかチェック
-                        bool isCorrect = p.Role.ExternalRecognitionRole == r;
+                        bool isCorrect = p.Role.CheckGuessAbility(r);
 
                         if (isCorrect)
                         {
