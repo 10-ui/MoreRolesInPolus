@@ -7,6 +7,10 @@ on:
     paths:
       - 'MoreRolesInPolus/**'
 
+permissions:
+  contents: write
+  workflows: write
+
 jobs:
   snapshot:
     runs-on: ubuntu-latest

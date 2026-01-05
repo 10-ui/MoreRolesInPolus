@@ -8,6 +8,10 @@ on:
     paths:
       - 'MoreRolesInPolus/**'
 
+permissions:
+  contents: write
+  workflows: write
+
 jobs:
   release:
     # PRがマージされた場合のみ実行
