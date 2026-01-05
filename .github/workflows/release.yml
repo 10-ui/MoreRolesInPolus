@@ -78,32 +78,49 @@ jobs:
         if: steps.version.outputs.found == 'true'
         id: release_notes
         run: |
-          # 前回のリリースタグを取得
-          PREV_TAG=$(git tag -l "v,v*" --sort=-version:refname | head -n 1)
-
+          CURRENT_TAG="${{ steps.version.outputs.version }}"
+          
+          # 前回のリリースタグを取得（今回のタグを除外）
+          PREV_TAG=$(git tag -l "v,v*" --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -n 1)
+          
+          echo "Current tag: $CURRENT_TAG"
+          echo "Previous tag: $PREV_TAG"
+          
           if [ -z "$PREV_TAG" ]; then
             # 初回リリースの場合
-            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges HEAD)
           else
             # 前回タグから今回までのコミット
             COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
           fi
-
-          # リリースノート作成
-          cat << EOF > release_notes.md
-          ## 🎉 リリース ${{ steps.version.outputs.version }}
-
-          ### 📝 変更内容
-
-          $COMMITS
-
-          ---
-
-          **インストール方法:**
-          1. ZIP ファイルをダウンロード
-          2. Among Us のフォルダに展開
+          
+          # コミットが空の場合のフォールバック
+          if [ -z "$COMMITS" ]; then
+            COMMITS="- 軽微な修正・改善"
+          fi
+          
+          echo "Commits found:"
+          echo "$COMMITS"
+          
+          # リリースノート作成（ヒアドキュメントはインデントなし）
+          cat << 'EOF' > release_notes.md
+          ## 📝 変更内容
+          
           EOF
-
+          
+          echo "$COMMITS" >> release_notes.md
+          
+          cat << 'EOF' >> release_notes.md
+          
+          ## 📦 インストール方法
+          
+          1. ZIPファイルをダウンロード
+          2. **解凍せずに**そのままAmong Usの`Addons`フォルダに配置
+          EOF
+          
+          echo "Release notes:"
+          cat release_notes.md
+          
           echo "notes<<EOFNOTES" >> $GITHUB_OUTPUT
           cat release_notes.md >> $GITHUB_OUTPUT
           echo "EOFNOTES" >> $GITHUB_OUTPUT
