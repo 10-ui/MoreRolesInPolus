@@ -58,7 +58,7 @@ jobs:
       - name: Update addon.meta with release version
         if: steps.version.outputs.found == 'true'
         run: |
-          cd MoreRolesInPolus/MoreRolesInPolus
+          cd MoreRolesInPolus
           # jq で Version フィールドを更新（vなしの番号）
           jq '.Version = "${{ steps.version.outputs.display_version }}"' addon.meta > addon.meta.tmp
           mv addon.meta.tmp addon.meta

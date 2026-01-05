@@ -53,7 +53,7 @@ jobs:
     
     - name: Update addon.meta with snapshot version
       run: |
-        cd MoreRolesInPolus/MoreRolesInPolus
+        cd MoreRolesInPolus
         # jq で Version フィールドを更新
         jq '.Version = "${{ steps.version.outputs.display_version }}"' addon.meta > addon.meta.tmp
         mv addon.meta.tmp addon.meta
