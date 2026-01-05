@@ -8,6 +8,9 @@ on:
     paths:
       - 'MoreRolesInPolus/**'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     # PRがマージされた場合のみ実行
@@ -32,8 +35,11 @@ jobs:
             VERSION_NUM="${BASH_REMATCH[1]}"
             VERSION="v,${VERSION_NUM}"
             FILENAME="${VERSION_NUM}"
+            # vを除いたバージョン番号（addon.meta用）
+            DISPLAY_VERSION="${VERSION_NUM#v}"
             echo "found=true" >> $GITHUB_OUTPUT
             echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "display_version=$DISPLAY_VERSION" >> $GITHUB_OUTPUT
             echo "filename=MoreRolesInPolus-$FILENAME.zip" >> $GITHUB_OUTPUT
             echo "release_name=MoreRolesInPolus-$FILENAME" >> $GITHUB_OUTPUT
             echo "Found version: $VERSION"
@@ -52,6 +58,16 @@ jobs:
           git tag ${{ steps.version.outputs.version }}
           git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} ${{ steps.version.outputs.version }}
 
+      - name: Update addon.meta with release version
+        if: steps.version.outputs.found == 'true'
+        run: |
+          cd MoreRolesInPolus
+          # jq で Version フィールドを更新（vなしの番号）
+          jq '.Version = "${{ steps.version.outputs.display_version }}"' addon.meta > addon.meta.tmp
+          mv addon.meta.tmp addon.meta
+          echo "Updated addon.meta:"
+          cat addon.meta
+      
       - name: Create ZIP from source
         if: steps.version.outputs.found == 'true'
         run: |

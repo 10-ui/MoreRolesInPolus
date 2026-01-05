@@ -52,7 +52,7 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
                 if(action.Time <= from){
                     continue;
                 }
-                 
+                
                 if (action.Time >= to) {
                     break;
                 }
@@ -177,8 +177,7 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
         }
 
         //ミーティングボタンが押されたときに実行する
-        //TODO:対象者になにか行動があるときのみ表示。なにもなければ生成しても行動なしになるようにする
-        //アイコンを書きたい
+        //APIが追加されたら、ドアの記録も取得する
         [Local]
         void OnMeetingStart(MeetingStartEvent ev) 
         {
@@ -186,7 +185,7 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
             {
                 var now = Time.time;
                 float elapsedTime = MathF.Floor(now - history.Time);
-                var textContent = history.Content == "" ? "特に異常は見られなかったようだ。" : history.Content;
+                var textContent = history.Content == "" ? "何もしていないようだ。" : history.Content;
 
                 var playerinfo = NebulaAPI.GUI.VerticalHolder(Virial.Media.GUIAlignment.Left,
                 NebulaAPI.GUI.RawText(Virial.Media.GUIAlignment.Left, NebulaAPI.GUI.GetAttribute(Virial.Text.AttributeAsset.OverlayTitle), textContent));

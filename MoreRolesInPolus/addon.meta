@@ -1,11 +1,10 @@
 ﻿{
 	"Id" : "MoreRolesInPolus",
 	"Name" : "MoreRolesInPolus",
-	"Author" : "10a&junjun",
+	"Author" : "10a x junjun",
 	"Description" : "NebulaOnThePolusで、Toaとjunjunが追加したい役職を追加するアドオンです。",
-	"Version" : "0.1.0",
+	"Version" : "0.1.3",
 	"Build" : 0,
-	"Dependency" : [
-	],
-	"Hidden" : False
+	"Dependency" : [],
+	"Hidden" : false
 }
