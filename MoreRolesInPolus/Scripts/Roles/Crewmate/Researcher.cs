@@ -177,6 +177,7 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
         }
 
         //ミーティングボタンが押されたときに実行する
+        //APIが追加されたら、ドアの記録も取得する
         [Local]
         void OnMeetingStart(MeetingStartEvent ev) 
         {
