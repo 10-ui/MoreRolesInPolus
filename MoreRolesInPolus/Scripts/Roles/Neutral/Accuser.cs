@@ -1,5 +1,8 @@
+using AsmResolver.PE.Imports.Builder;
 using Nebula.Roles.Complex;
+using UnityEngine.Tilemaps;
 using UnityEngine.UIElements.Experimental;
+using Virial.Command;
 using Virial.Runtime;
 namespace MoreRolesInPolus.Roles.Neutral;
 
@@ -58,6 +61,8 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
         int maxhint;
         //入手したヒントの回数
         private int leftHint = 0;
+        //入手したヒント
+        Dictionary<Player, (string longName,string shortName)> roleTextHint = new();
         // 推測ウィンドウの参照
         private MetaScreen? lastGuesserWindow = null;
 
@@ -164,17 +169,55 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
             }
         }
 
-        //private List<DefinedRole> GetRoleHints(GamePlayer targetPlayer)
-        //{
-        //    List<DefinedRole> hints = new();
-
-        //    hints.Add(targetPlayer.Role.Role);
-
-        //    HashSet<DefinedRole> possibleRoles = new();
+        //役職のヒントを入手するがlongかshortか選択をもっと楽にしたい
+        private List<String> GetRoleHints(GamePlayer targetPlayer, String letter)
+        {
+            if (letter == "long")
+            {
 
 
+                List<String> hints = new();
 
-        //}
+                HashSet<DefinedRole> possibleRoles = new();
+
+                hints.Add(targetPlayer.Role.DisplayColoredName);
+
+                foreach (var r in NebulaAPI.
+                {
+                    if (r.IsSpawnble && r != targetPlayer.Role.Role) possibleRoles.Add(r);
+                }
+
+                // HashSet にはインデクサがないため、リストに変換してからインデックスアクセスする
+                var possibleRolesList = possibleRoles.ToList();
+                possibleRolesList.MyShuffle();
+
+                for (int i = 0; i < NumOfCandidatesOption - 1; i++)
+                {
+                    hints.Add(possibleRolesList[i].DisplayColoredName);
+                }
+
+                hints.MyShuffle();
+                return hints;
+            }
+            else {                 
+                List<String> hints = new();
+                HashSet<DefinedRole> possibleRoles = new();
+                hints.Add(targetPlayer.Role.DisplayColoredShort);
+                foreach (var r in NebulaAPI.
+                {
+                    if (r.IsSpawnble && r != targetPlayer.Role.Role) possibleRoles.Add(r);
+                }
+                // HashSet にはインデクサがないため、リストに変換してからインデックスアクセスする
+                var possibleRolesList = possibleRoles.ToList();
+                possibleRolesList.MyShuffle();
+                for (int i = 0; i < NumOfCandidatesOption - 1; i++)
+                {
+                    hints.Add(possibleRolesList[i].DisplayColoredShort);
+                }
+                hints.MyShuffle();
+                return hints;
+            }
+        }
 
 
         void setAccuserTask()
@@ -237,9 +280,24 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
                 {
                     var target = playerTracker.CurrentTarget;
                     String targetRoleName = playerTracker.CurrentTarget.Role.DisplayColoredName;
-                    NebulaAPI.CurrentGame?.GetModule<TitleShower>()?.SetText(targetRoleName, new(100, 100, 100), 5.5f, true);
+                    List<string> roleHintsLong = GetRoleHints(target,"long");
+                    List<string> roleHintsShort = GetRoleHints(target, "short");
+                    string hintTextLong = string.Join(" ", roleHintsLong);
+                    string hintTextShort = string.Join(" ", roleHintsShort);
+                    roleTextHint[target] = (hintTextLong, hintTextShort);
+                    NebulaAPI.CurrentGame?.GetModule<TitleShower>()?.SetText(hintTextLong, new(100, 100, 100), 5.5f, true);
                     leftHint--;
                 };
+            }
+        }
+
+        void ReflectRoleHintName(PlayerSetFakeRoleNameEvent ev)
+        {
+
+            if (roleTextHint.ContainsKey(ev.Player) && GetLongTaskHintOption)
+            {
+                string hintText = roleTextHint[ev.Player].shortName;
+                ev.Alternate(hintText);
             }
         }
     }
