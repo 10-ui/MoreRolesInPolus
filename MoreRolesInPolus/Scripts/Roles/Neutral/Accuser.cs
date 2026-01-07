@@ -4,6 +4,7 @@ using UnityEngine.Tilemaps;
 using UnityEngine.UIElements.Experimental;
 using Virial.Command;
 using Virial.Runtime;
+using static UnityEngine.GraphicsBuffer;
 namespace MoreRolesInPolus.Roles.Neutral;
 
 [NebulaPreprocess(PreprocessPhase.BuildAssignmentTypes)]
@@ -170,53 +171,35 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
         }
 
         //役職のヒントを入手するがlongかshortか選択をもっと楽にしたい
-        private List<String> GetRoleHints(GamePlayer targetPlayer, String letter)
+        private (String,String) GetRoleHints(GamePlayer targetPlayer)
         {
-            if (letter == "long")
+            List<String> hintsLong = new();
+            List<String> hintsShort = new();
+
+            HashSet<DefinedRole> possibleRoles = new();
+
+            hintsLong.Add(targetPlayer.Role.DisplayColoredName);
+            hintsShort.Add(targetPlayer.Role.DisplayColoredShort);
+
+            foreach (var r in NebulaAPI.Assibnables.AllRoles)
             {
-
-
-                List<String> hints = new();
-
-                HashSet<DefinedRole> possibleRoles = new();
-
-                hints.Add(targetPlayer.Role.DisplayColoredName);
-
-                foreach (var r in NebulaAPI.
-                {
-                    if (r.IsSpawnble && r != targetPlayer.Role.Role) possibleRoles.Add(r);
-                }
-
-                // HashSet にはインデクサがないため、リストに変換してからインデックスアクセスする
-                var possibleRolesList = possibleRoles.ToList();
-                possibleRolesList.MyShuffle();
-
-                for (int i = 0; i < NumOfCandidatesOption - 1; i++)
-                {
-                    hints.Add(possibleRolesList[i].DisplayColoredName);
-                }
-
-                hints.MyShuffle();
-                return hints;
+                if (r.IsSpawnble && r != targetPlayer.Role.Role) possibleRoles.Add(r);
             }
-            else {                 
-                List<String> hints = new();
-                HashSet<DefinedRole> possibleRoles = new();
-                hints.Add(targetPlayer.Role.DisplayColoredShort);
-                foreach (var r in NebulaAPI.
-                {
-                    if (r.IsSpawnble && r != targetPlayer.Role.Role) possibleRoles.Add(r);
-                }
-                // HashSet にはインデクサがないため、リストに変換してからインデックスアクセスする
-                var possibleRolesList = possibleRoles.ToList();
-                possibleRolesList.MyShuffle();
-                for (int i = 0; i < NumOfCandidatesOption - 1; i++)
-                {
-                    hints.Add(possibleRolesList[i].DisplayColoredShort);
-                }
-                hints.MyShuffle();
-                return hints;
+
+            // HashSet にはインデクサがないため、リストに変換してからインデックスアクセスする
+            var possibleRolesList = possibleRoles.ToList();
+            possibleRolesList.MyShuffle();
+
+            for (int i = 0; i < NumOfCandidatesOption - 1; i++)
+            {
+                hintsLong.Add(possibleRolesList[i].DisplayColoredName);
+                hintsShort.Add(possibleRolesList[i].DisplayColoredShort);
             }
+
+            hintsLong.MyShuffle();
+            hintsShort.MyShuffle();
+
+            return (string.Join(" ", hintsLong), string.Join(" ", hintsShort));
         }
 
 
@@ -272,20 +255,16 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
             if (leftHint > 0)
             {
                 var playerTracker = NebulaAPI.Modules.PlayerTracker(this, MyPlayer);
+                var target = playerTracker.CurrentTarget;
                 var hintButton = NebulaAPI.Modules.EffectButton(this, MyPlayer, VirtualKeyInput.Ability,
                         1f, 0f, "accuser_hint", researchSprite,
-                        _ => playerTracker.CurrentTarget != null, _ => leftHint > 0);
+                        _ => playerTracker != null && !roleTextHint.ContainsKey(target), _ => leftHint > 0);
                 hintButton.ShowUsesIcon(3, leftHint.ToString());
                 hintButton.OnClick = (Button) =>
                 {
-                    var target = playerTracker.CurrentTarget;
-                    String targetRoleName = playerTracker.CurrentTarget.Role.DisplayColoredName;
-                    List<string> roleHintsLong = GetRoleHints(target,"long");
-                    List<string> roleHintsShort = GetRoleHints(target, "short");
-                    string hintTextLong = string.Join(" ", roleHintsLong);
-                    string hintTextShort = string.Join(" ", roleHintsShort);
-                    roleTextHint[target] = (hintTextLong, hintTextShort);
-                    NebulaAPI.CurrentGame?.GetModule<TitleShower>()?.SetText(hintTextLong, new(100, 100, 100), 5.5f, true);
+                    String targetRoleName = target.Role.DisplayColoredName;
+                    roleTextHint[target] = GetRoleHints(target);
+                    NebulaAPI.CurrentGame?.GetModule<TitleShower>()?.SetText(roleTextHint[target].longName, new(100, 100, 100), 5.5f, true);
                     leftHint--;
                 };
             }
