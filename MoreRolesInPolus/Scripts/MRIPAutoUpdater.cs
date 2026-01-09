@@ -54,11 +54,13 @@ public static class MRIPAutoUpdater
             {
                 try
                 {
+                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Initializing ConfigSaver..."));
                     _configSaver = new JsonDataSaver<AutoUpdateConfig>("MRIPAutoUpdate");
+                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"ConfigSaver initialized successfully. Current mode: {_configSaver.Data.Mode}"));
                 }
                 catch (Exception ex)
                 {
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Failed to initialize ConfigSaver: {ex.Message}"));
+                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"Failed to initialize ConfigSaver: {ex.Message}\n{ex.StackTrace}"));
                     // 初期化失敗時はnullを返し、呼び出し側で対処
                     return null;
                 }
@@ -101,15 +103,27 @@ public static class MRIPAutoUpdater
     /// <param name="mode">設定するモード</param>
     public static void SetAutoUpdateMode(AutoUpdateMode mode)
     {
+        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"SetAutoUpdateMode called with: {mode}"));
+        
         var saver = ConfigSaver;
         if (saver == null)
         {
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"ConfigSaver unavailable, cannot save mode: {mode}"));
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"ConfigSaver unavailable, cannot save mode: {mode}"));
             return;
         }
+        
+        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Setting mode from {saver.Data.Mode} to {mode}"));
         saver.Data.Mode = mode;
-        saver.Save();
-        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Auto-update mode set to: {mode}"));
+        
+        try
+        {
+            saver.Save();
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Auto-update mode saved successfully: {mode}"));
+        }
+        catch (Exception ex)
+        {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"Failed to save config: {ex.Message}\n{ex.StackTrace}"));
+        }
     }
     
     /// <summary>
@@ -337,13 +351,14 @@ public static class MRIPAutoUpdater
     public class AutoUpdateConfig
     {
         /// <summary>自動更新モード（デフォルト: 無効）</summary>
-        public AutoUpdateMode Mode { get; set; } = AutoUpdateMode.Disabled;
+        public AutoUpdateMode Mode { get; set; }
         
         /// <summary>
         /// デフォルトコンストラクタ（JSONデシリアライズに必要）
         /// </summary>
         public AutoUpdateConfig()
         {
+            Mode = AutoUpdateMode.Disabled;
         }
     }
 }
