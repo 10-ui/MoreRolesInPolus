@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using static Rewired.UI.ControlMapper.ControlMapper;
 
 namespace MoreRolesInPolus.Roles.Modifier;
 
@@ -15,6 +16,10 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
 
     static public Barclaw MyRole = new Barclaw();
     RuntimeModifier RuntimeAssignableGenerator<RuntimeModifier>.CreateInstance(GamePlayer player, int[] arguments) => new Instance(player);
+
+    static private readonly IntegerConfiguration numOfDeadRequired = NebulaAPI.Configurations.Configuration("options.role.barclaw.numOfDeadRequired", (1, 5), 2);
+
+
     public class Instance : RuntimeAssignableTemplate, RuntimeModifier
     {
         DefinedModifier RuntimeModifier.Modifier => MyRole;
@@ -24,32 +29,82 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
 
         void RuntimeAssignable.OnActivated() { }
 
-        Dictionary<Player, (DefinedRole role, int roleCount)> roleMap = [];
 
-
-        int numOfDeadBody = 0;
+        bool nowMeeting = false;
+        bool myDead = false;
+        int numOfKillCount = 0;
+        List<GamePlayer> deadPlayer = new List<GamePlayer>();
 
         [Local]
-        void OnDeadBodyGenerated(DeadBodyInstantiateEvent evt)
+        void OnKillPlayer(PlayerKillPlayerEvent ev)
         {
-            if (AmOwner)
+
+            if (AmOwner && !nowMeeting)
             {
-                numOfDeadBody++;
+                if (MyPlayer == ev.Dead)
+                {
+                    myDead = true;
+                }
+
+                numOfKillCount++;
+                deadPlayer.Add(ev.Dead);
 
                 NebulaAPI.CurrentGame?.GetModule<TitleShower>()?.SetText(
-                    numOfDeadBody.ToString(), // int を string に変換
+                    numOfKillCount.ToString() + ":" + ev.Dead.PlayerName, // int を string に変換
                     new(100, 100, 100),
                     5.5f,
                     true
                 );
+
+                if (numOfKillCount >= numOfDeadRequired && !myDead)
+                {
+                    AmongUsUtil.PlayQuickFlash(MyRole.UnityColor);
+                    //緊急会議が始まる予定
+                }
             }
         }
 
-
+        [Local]
         void OnPlayerRevived(PlayerReviveEvent ev)
         {
-
+            if (AmOwner)
+            {
+                if (deadPlayer.Contains(ev.Revived))
+                {
+                    if (myDead && ev.Revived == MyPlayer)
+                    {
+                        myDead = false;
+                    }
+                    numOfKillCount--;
+                    deadPlayer.Remove(ev.Revived);
+                    NebulaAPI.CurrentGame?.GetModule<TitleShower>()?.SetText(
+                        numOfKillCount.ToString() + ":" + ev.Revived.PlayerName, // int を string に変換
+                        new(100, 100, 100),
+                        5.5f,
+                        true
+                    );
+                }
+            }
         }
 
+        void OnMeetingStart(MeetingStartEvent ev)
+        {
+            if (AmOwner)
+            {
+                nowMeeting = true;
+                numOfKillCount = 0;
+                deadPlayer.Clear();
+            }
+        }
+        void OnMeetingEnd(MeetingEndEvent ev)
+        {
+            if (AmOwner)
+            {
+                nowMeeting = false;
+                numOfKillCount = 0;
+                deadPlayer.Clear();
+            }
+
+        }
     }
 }
