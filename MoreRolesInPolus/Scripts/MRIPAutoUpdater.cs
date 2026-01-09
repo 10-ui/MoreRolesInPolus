@@ -39,9 +39,33 @@ public static class MRIPAutoUpdater
     private const string GitHubApiUrl = "https://api.github.com/repos/" + GitHubOwner + "/" + GitHubRepo + "/releases/latest";
     
     /// <summary>
-    /// 設定保存用
+    /// 設定保存用（遅延初期化）
     /// </summary>
-    private static JsonDataSaver<AutoUpdateConfig> ConfigSaver = new JsonDataSaver<AutoUpdateConfig>("MRIPAutoUpdate");
+    private static JsonDataSaver<AutoUpdateConfig>? _configSaver = null;
+    
+    /// <summary>
+    /// ConfigSaverを安全に取得（初期化失敗時はデフォルト値を返す）
+    /// </summary>
+    private static JsonDataSaver<AutoUpdateConfig>? ConfigSaver
+    {
+        get
+        {
+            if (_configSaver == null)
+            {
+                try
+                {
+                    _configSaver = new JsonDataSaver<AutoUpdateConfig>("MRIPAutoUpdate");
+                }
+                catch (Exception ex)
+                {
+                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Failed to initialize ConfigSaver: {ex.Message}"));
+                    // 初期化失敗時はnullを返し、呼び出し側で対処
+                    return null;
+                }
+            }
+            return _configSaver;
+        }
+    }
     
     /// <summary>
     /// 自動更新モード
@@ -62,7 +86,13 @@ public static class MRIPAutoUpdater
     /// <returns>自動更新モード</returns>
     public static AutoUpdateMode GetAutoUpdateMode()
     {
-        return ConfigSaver.Data.Mode;
+        var saver = ConfigSaver;
+        if (saver == null)
+        {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix("ConfigSaver unavailable, returning Disabled"));
+            return AutoUpdateMode.Disabled;
+        }
+        return saver.Data.Mode;
     }
     
     /// <summary>
@@ -71,8 +101,14 @@ public static class MRIPAutoUpdater
     /// <param name="mode">設定するモード</param>
     public static void SetAutoUpdateMode(AutoUpdateMode mode)
     {
-        ConfigSaver.Data.Mode = mode;
-        ConfigSaver.Save();
+        var saver = ConfigSaver;
+        if (saver == null)
+        {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"ConfigSaver unavailable, cannot save mode: {mode}"));
+            return;
+        }
+        saver.Data.Mode = mode;
+        saver.Save();
         NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Auto-update mode set to: {mode}"));
     }
     
