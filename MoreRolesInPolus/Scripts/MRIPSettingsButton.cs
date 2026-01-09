@@ -154,9 +154,9 @@ public static class MRIPMainMenuPatch
             yield return null;
         }
         
-        // 自動更新チェック
-        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Starting auto-update check..."));
-        MRIPAutoUpdater.OnMainMenuLoaded();
+        // 自動更新チェックは無効化
+        // NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Starting auto-update check..."));
+        // MRIPAutoUpdater.OnMainMenuLoaded();
         
         // NebulaScreenへのボタン追加を継続的に監視
         // NebulaScreenは「ネブラ」ボタンを押した時に表示されるので、アクティブになったタイミングで追加
@@ -493,17 +493,18 @@ public static class MRIPMainMenuPatch
                     inner.Append(new CombinedWidgetOld(0.5f, placeable.ToArray()) { Alignment = IMetaWidgetOld.AlignmentOption.Left });
                 }
                 
-                // 安定版カテゴリの場合に自動更新（安定版）行を表示
-                if ((category ?? MRIPModUpdater.ReleaseCategory.Major) == MRIPModUpdater.ReleaseCategory.Major)
-                {
-                    AutoUpdateContent("最新の安定版", MRIPAutoUpdater.AutoUpdateMode.Major);
-                }
-                
-                // スナップショットカテゴリの場合に自動更新（スナップショット）行を表示
-                if ((category ?? MRIPModUpdater.ReleaseCategory.Snapshot) == MRIPModUpdater.ReleaseCategory.Snapshot)
-                {
-                    AutoUpdateContent("最新のスナップショット", MRIPAutoUpdater.AutoUpdateMode.Snapshot);
-                }
+                // 自動更新ボタンは無効化
+                // // 安定版カテゴリの場合に自動更新（安定版）行を表示
+                // if ((category ?? MRIPModUpdater.ReleaseCategory.Major) == MRIPModUpdater.ReleaseCategory.Major)
+                // {
+                //     AutoUpdateContent("最新の安定版", MRIPAutoUpdater.AutoUpdateMode.Major);
+                // }
+                // 
+                // // スナップショットカテゴリの場合に自動更新（スナップショット）行を表示
+                // if ((category ?? MRIPModUpdater.ReleaseCategory.Snapshot) == MRIPModUpdater.ReleaseCategory.Snapshot)
+                // {
+                //     AutoUpdateContent("最新のスナップショット", MRIPAutoUpdater.AutoUpdateMode.Snapshot);
+                // }
                 
                 // バージョン一覧
                 foreach (var version in versions)
