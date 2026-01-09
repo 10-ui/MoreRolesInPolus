@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MoreRolesInPolus.Scripts.Roles.script;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using static Rewired.UI.ControlMapper.ControlMapper;
@@ -18,9 +19,9 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
     RuntimeModifier RuntimeAssignableGenerator<RuntimeModifier>.CreateInstance(GamePlayer player, int[] arguments) => new Instance(player);
 
     static private readonly IntegerConfiguration NumOfDeadRequired = NebulaAPI.Configurations.Configuration("options.role.barclaw.numOfDeadRequired", (1, 5), 2);
-    static private readonly BoolConfiguration ShowMeetingInFlash = NebulaAPI.Configurations.Configuration("options.role.bait.showKillFlash", false);
-    static private readonly FloatConfiguration MeetingDelayOption = NebulaAPI.Configurations.Configuration("options.role.bait.reportDelay", (0f, 5f, 0.5f), 0f, FloatConfigurationDecorator.Second);
-    static private readonly FloatConfiguration MeetingDelayDispersionOption = NebulaAPI.Configurations.Configuration("options.role.bait.reportDelayDispersion", (0f, 10f, 0.25f), 0.5f, FloatConfigurationDecorator.Second);
+    static private readonly BoolConfiguration ShowMeetingInFlash = NebulaAPI.Configurations.Configuration("options.role.barclaw.ShowMeetingInFlash", false);
+    static private readonly FloatConfiguration MeetingDelayOption = NebulaAPI.Configurations.Configuration("options.role.barclaw.meetingDelayOption", (0f, 5f, 0.5f), 0f, FloatConfigurationDecorator.Second);
+    static private readonly FloatConfiguration MeetingDelayDispersionOption = NebulaAPI.Configurations.Configuration("options.role.barclaw.MeetingDelayDispersionOption", (0f, 10f, 0.25f), 0.5f, FloatConfigurationDecorator.Second);
 
 
     public class Instance : RuntimeAssignableTemplate, RuntimeModifier
@@ -61,11 +62,18 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
 
                 if (numOfKillCount >= NumOfDeadRequired && !myDead)
                 {
-                    AmongUsUtil.PlayQuickFlash(MyRole.UnityColor);
-                    CallMeeting(MyPlayer);
+
+                    if(ShowMeetingInFlash) AmongUsUtil.PlayQuickFlash(MyRole.UnityColor);
+
+                    float t = Mathn.Max(0.1f, MeetingDelayOption) + MeetingDelayDispersionOption * (float)System.Random.Shared.NextDouble();
+                    
+
+                    if(nowMeeting) return;
+                    CallMeetingHelper.CallMeeting(MyPlayer);
                 }
             }
         }
+
 
 
         [Local]
@@ -113,22 +121,6 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
                 deadPlayer.Clear();
             }
 
-        }
-
-        [NebulaRPC]
-        public static void CallMeeting(GamePlayer p)
-        {
-            if (AmongUsClient.Instance.AmHost)
-            {
-                var player = PlayerControl.AllPlayerControls.GetFastEnumerator().FirstOrDefault(c => c.PlayerId == p.PlayerId);
-                MeetingRoomManager.Instance.AssignSelf(player, null);
-                if (GameManager.Instance.CheckTaskCompletion())
-                {
-                    return;
-                }
-                DestroyableSingleton<HudManager>.Instance.OpenMeetingRoom(player);
-                player.RpcStartMeeting(null);
-            }
         }
 
     }
