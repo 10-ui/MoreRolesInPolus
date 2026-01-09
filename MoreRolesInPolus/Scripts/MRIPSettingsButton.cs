@@ -154,9 +154,9 @@ public static class MRIPMainMenuPatch
             yield return null;
         }
         
-        // 自動更新チェック
-        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Starting auto-update check..."));
-        MRIPAutoUpdater.OnMainMenuLoaded();
+        // 自動更新チェックは無効化
+        // NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Starting auto-update check..."));
+        // MRIPAutoUpdater.OnMainMenuLoaded();
         
         // NebulaScreenへのボタン追加を継続的に監視
         // NebulaScreenは「ネブラ」ボタンを押した時に表示されるので、アクティブになったタイミングで追加
@@ -456,7 +456,8 @@ public static class MRIPMainMenuPatch
                 
                 var inner = new MetaWidgetOld();
                 
-                // 自動更新設定行
+                // 自動更新設定行（現在は使用していない）
+                /*
                 void AutoUpdateContent(string label, MRIPAutoUpdater.AutoUpdateMode mode)
                 {
                     var currentMode = MRIPAutoUpdater.GetAutoUpdateMode();
@@ -492,18 +493,20 @@ public static class MRIPMainMenuPatch
                     
                     inner.Append(new CombinedWidgetOld(0.5f, placeable.ToArray()) { Alignment = IMetaWidgetOld.AlignmentOption.Left });
                 }
+                */
                 
-                // 安定版カテゴリの場合に自動更新（安定版）行を表示
-                if ((category ?? MRIPModUpdater.ReleaseCategory.Major) == MRIPModUpdater.ReleaseCategory.Major)
-                {
-                    AutoUpdateContent("最新の安定版", MRIPAutoUpdater.AutoUpdateMode.Major);
-                }
-                
-                // スナップショットカテゴリの場合に自動更新（スナップショット）行を表示
-                if ((category ?? MRIPModUpdater.ReleaseCategory.Snapshot) == MRIPModUpdater.ReleaseCategory.Snapshot)
-                {
-                    AutoUpdateContent("最新のスナップショット", MRIPAutoUpdater.AutoUpdateMode.Snapshot);
-                }
+                // 自動更新ボタンは無効化
+                // // 安定版カテゴリの場合に自動更新（安定版）行を表示
+                // if ((category ?? MRIPModUpdater.ReleaseCategory.Major) == MRIPModUpdater.ReleaseCategory.Major)
+                // {
+                //     AutoUpdateContent("最新の安定版", MRIPAutoUpdater.AutoUpdateMode.Major);
+                // }
+                // 
+                // // スナップショットカテゴリの場合に自動更新（スナップショット）行を表示
+                // if ((category ?? MRIPModUpdater.ReleaseCategory.Snapshot) == MRIPModUpdater.ReleaseCategory.Snapshot)
+                // {
+                //     AutoUpdateContent("最新のスナップショット", MRIPAutoUpdater.AutoUpdateMode.Snapshot);
+                // }
                 
                 // バージョン一覧
                 foreach (var version in versions)
@@ -613,7 +616,28 @@ public static class MRIPMainMenuPatch
                 NebulaManager.Instance.StartCoroutine(MRIPModUpdater.CoFetchVersionTags((list) => 
                 {
                     versions = list;
-                    UpdateContents();
+                    
+                    // エラーチェック: データが取得できなかった場合
+                    if (list == null || list.Count == 0)
+                    {
+                        var errorWidget = new MetaWidgetOld();
+                        errorWidget.Append(new MetaWidgetOld.Text(NameAttribute) 
+                        { 
+                            RawText = "エラー: バージョン情報を取得できませんでした",
+                            Alignment = IMetaWidgetOld.AlignmentOption.Center
+                        });
+                        errorWidget.Append(new MetaWidgetOld.VerticalMargin(0.3f));
+                        errorWidget.Append(new MetaWidgetOld.Text(CategoryAttribute) 
+                        { 
+                            RawText = "GitHub APIへのアクセスが制限されています。\n\nしばらく待ってから再度お試しください。",
+                            Alignment = IMetaWidgetOld.AlignmentOption.Center
+                        });
+                        innerRef.Value?.SetWidget(errorWidget);
+                    }
+                    else
+                    {
+                        UpdateContents();
+                    }
                 }).WrapToIl2Cpp());
             }
             
