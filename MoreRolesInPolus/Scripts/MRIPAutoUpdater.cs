@@ -301,7 +301,13 @@ public static class MRIPAutoUpdater
     public class AutoUpdateConfig
     {
         /// <summary>自動更新モード（デフォルト: 無効）</summary>
-        [JsonSerializableField(false, false)]
-        public AutoUpdateMode Mode = AutoUpdateMode.Disabled;
+        public AutoUpdateMode Mode { get; set; } = AutoUpdateMode.Disabled;
+        
+        /// <summary>
+        /// デフォルトコンストラクタ（JSONデシリアライズに必要）
+        /// </summary>
+        public AutoUpdateConfig()
+        {
+        }
     }
 }
