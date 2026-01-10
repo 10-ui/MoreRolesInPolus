@@ -55,6 +55,8 @@
 "role.barclaw.generalBlurb" : "死が重なれば、沈黙は破られる"
 "options.role.barclaw.detail" : "ばーくろーは死人が一定数出ると勝手に緊急会議を始めてしまうクルー専用モディファイアです"
 "options.role.barclaw.numOfDeadRequired" : "緊急会議が発動する死体の数"
+"options.role.barclaw.numOfMaxButton" : "緊急会議が発動する最大回数"
+"options.role.barclaw.enableAfterSecondTurn" : "２回目のターン以降に有効化"
 "options.role.barclaw.showMeetingInFlash" : "会議が入る前(死体が一定数出た時のフラッシュ表示"
 "options.role.barclaw.meetingDelayOption" : "会議が始まるまでの遅延"
 "options.role.barclaw.meetingDelayDispersionOption" : "会議が始まるまでの遅延のばらつき"
