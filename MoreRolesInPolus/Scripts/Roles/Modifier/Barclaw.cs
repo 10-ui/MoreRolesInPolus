@@ -29,12 +29,18 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
     public class Instance : RuntimeAssignableTemplate, RuntimeModifier
     {
         DefinedModifier RuntimeModifier.Modifier => MyRole;
+
+        bool RuntimeAssignable.CanBeAwareAssignment => NebulaGameManager.Instance?.CanSeeAllInfo ?? false;
         public Instance(GamePlayer player) : base(player)
         {
         }
 
         void RuntimeAssignable.OnActivated() { }
 
+        void RuntimeAssignable.DecorateNameConstantly(ref string name, bool canSeeAllInfo, bool inEndScene)
+        {
+            if (canSeeAllInfo || inEndScene) name += MyRole.GetRoleIconTagSmall();
+        }
 
         bool nowMeeting = false;
         bool myDead = false;
