@@ -24,7 +24,7 @@ using UnityEngine;
 using Virial.Media;
 using Virial.Text;
 
-namespace MoreRolesInPolus;
+namespace Toa.MoreRolesInPolus.Scripts.Settings;
 
 /// <summary>
 /// MRIPバージョン更新マネージャー
@@ -418,25 +418,34 @@ public static class MRIPModUpdater
             {
                 string addonsPath = PathHelpers.GameRootPath + Path.DirectorySeparatorChar + "Addons";
                 
-                // 古いMRIPのzipファイルを削除またはリネーム
-                LastFailedToDeleteFiles.Clear();
-                bool allCleared = DeleteOldAddonFiles(addonsPath, LastFailedToDeleteFiles);
+                // 現在のアドオンをDisposeして、zipファイルのロックを解除
+                var currentAddon = MRIPInfo.Addon;
                 
-                // 新しいファイル名（バージョン情報付き）
-                // - 古いファイルが全て削除/リネームできた場合: ! 1つで保存（永遠に増えない）
-                // - 失敗した場合: ! を増やして保存（優先度を上げるため）
-                string prefix;
-                if (allCleared)
+                if (currentAddon != null && !currentAddon.IsBuiltIn)
                 {
-                    prefix = "!";
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("All old files cleared, using single ! prefix"));
+                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Disposing current addon to unlock zip file..."));
+                    
+                    try
+                    {
+                        // 現在のアドオンをDispose（zipファイルをクローズ）
+                        currentAddon.Dispose();
+                        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Current addon disposed successfully"));
+                        
+                        // 少し待機してOSがファイルハンドルを解放するのを待つ
+                        System.Threading.Thread.Sleep(100);
+                    }
+                    catch (Exception ex)
+                    {
+                        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Failed to dispose addon: {ex.Message}"));
+                    }
                 }
-                else
-                {
-                    prefix = GetNextPriorityPrefix(addonsPath);
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Some files not cleared, using prefix: {prefix}"));
-                }
-                string zipPath = Path.Combine(addonsPath, $"{prefix}{MRIPInfo.AddonId}-{VersionForFileName}.zip");
+                
+                // 古いMRIPファイルを直接削除（Dispose後は削除可能！）
+                LastFailedToDeleteFiles.Clear();
+                DeleteOldAddonFiles(addonsPath, LastFailedToDeleteFiles);
+                
+                // 新しいファイル名（シンプルに保存）
+                string zipPath = Path.Combine(addonsPath, $"{MRIPInfo.AddonId}-{VersionForFileName}.zip");
                 
                 File.WriteAllBytes(zipPath, zipData);
                 NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Update saved to: {zipPath}"));
@@ -450,55 +459,6 @@ public static class MRIPModUpdater
             }
             
             response?.Dispose();
-        }
-        
-        /// <summary>
-        /// 削除予定ファイルのパス
-        /// </summary>
-        private static string GetPendingDeleteFilePath()
-        {
-            return Path.Combine(PathHelpers.GameRootPath, "Addons", "MRIPPendingDelete.txt");
-        }
-        
-        /// <summary>
-        /// 次のダウンロードで使用する優先度プレフィックスを取得
-        /// 既存のMRIPファイルより多くの!を付けて、常に新しいダウンロードが最優先で読み込まれるようにする
-        /// </summary>
-        /// <param name="addonsPath">Addonsフォルダのパス</param>
-        /// <returns>プレフィックス文字列（例: "!", "!!", "!!!"）</returns>
-        private static string GetNextPriorityPrefix(string addonsPath)
-        {
-            int maxExclamations = 0;
-            
-            try
-            {
-                if (Directory.Exists(addonsPath))
-                {
-                    string[] allZipFiles = Directory.GetFiles(addonsPath, "*.zip");
-                    foreach (string file in allZipFiles)
-                    {
-                        string fileName = Path.GetFileName(file);
-                        if (fileName.Contains(MRIPInfo.AddonId))
-                        {
-                            // 先頭の!の数をカウント
-                            int count = 0;
-                            foreach (char c in fileName)
-                            {
-                                if (c == '!') count++;
-                                else break;
-                            }
-                            if (count > maxExclamations) maxExclamations = count;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Error getting priority prefix: {ex.Message}"));
-            }
-            
-            // 既存の最大値より1つ多い!を返す（最低1つ）
-            return new string('!', maxExclamations + 1);
         }
         
         /// <summary>
@@ -573,62 +533,13 @@ public static class MRIPModUpdater
                     }
                 }
                 
-                // 削除もリネームも失敗したファイルがあれば、次回起動時に削除するためにマークする
-                if (failedFiles.Count > 0)
-                {
-                    string pendingFile = GetPendingDeleteFilePath();
-                    var fullPaths = failedFiles.Select(f => Path.Combine(addonsPath, f)).ToList();
-                    File.WriteAllLines(pendingFile, fullPaths);
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Marked {failedFiles.Count} files for deletion on next startup"));
-                    return false; // 失敗したファイルあり
-                }
-                
-                return true; // 全て成功
+                // Dispose後は削除できるので、failedFilesがあっても次回は不要
+                return failedFiles.Count == 0;
             }
             catch (Exception ex)
             {
                 NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Error cleaning old files: {ex.Message}"));
                 return false;
-            }
-        }
-        
-        /// <summary>
-        /// 起動時に削除予定のファイルを削除する（アドオン読み込み前に呼ばれる必要がある）
-        /// </summary>
-        public static void CleanupPendingDeleteFiles()
-        {
-            try
-            {
-                string pendingFile = GetPendingDeleteFilePath();
-                if (!File.Exists(pendingFile)) return;
-                
-                string[] filesToDelete = File.ReadAllLines(pendingFile);
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"CleanupPendingDeleteFiles: Found {filesToDelete.Length} files to delete"));
-                
-                foreach (string file in filesToDelete)
-                {
-                    if (string.IsNullOrWhiteSpace(file)) continue;
-                    
-                    try
-                    {
-                        if (File.Exists(file))
-                        {
-                            File.Delete(file);
-                            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Deleted pending file: {file}"));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Failed to delete pending file {file}: {ex.Message}"));
-                    }
-                }
-                
-                // マーカーファイルを削除
-                File.Delete(pendingFile);
-            }
-            catch (Exception ex)
-            {
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Error in CleanupPendingDeleteFiles: {ex.Message}"));
             }
         }
         
@@ -804,19 +715,7 @@ public static class MRIPModUpdater
             MaybeNoMorePages = true;
         }
         
-        // カテゴリ順、バージョン順でソート（スナップショットは日付文字列で比較）
-        releases.Sort((a, b) =>
-        {
-            // カテゴリが同じ場合はバージョンで比較
-            if (a.Category == b.Category)
-            {
-                // 新しい順（降順）
-                return string.Compare(b.VersionForCompare, a.VersionForCompare, StringComparison.Ordinal);
-            }
-            // Majorを先に
-            return a.Category.CompareTo(b.Category);
-        });
-        
+        // GitHubのAPIはリリース順（新しい順）で返すので、そのままの順序を維持
         _cache = releases;
     }
 }
