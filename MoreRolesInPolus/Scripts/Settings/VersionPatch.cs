@@ -18,7 +18,7 @@ using UnityEngine;
 using TMPro; // TextMeshProのために必要
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 
-namespace MoreRolesInPolus;
+namespace Toa.MoreRolesInPolus.Scripts.Settings;
 
 /// <summary>
 /// Harmonyパッチのセットアップクラス

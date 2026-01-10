@@ -7,21 +7,11 @@
  * - バージョン選択UI（Nebula風）を表示
  */
 
-using HarmonyLib;
-using Nebula.Modules;
-using Nebula.Modules.GUIWidget;
-using Nebula.Modules.MetaWidget;
 using Nebula.Patches;
-using Virial.Media;
 using Virial.Runtime;
-using Virial.Text;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
-using UnityEngine;
 using UnityEngine.UI;
-using TMPro;
-using System.Collections.Generic;
 
-namespace MoreRolesInPolus;
+namespace Toa.MoreRolesInPolus.Scripts.Settings;
 
 /// <summary>
 /// MainMenu表示後にMRIPボタンを追加するHarmonyパッチのセットアップ
@@ -456,46 +446,7 @@ public static class MRIPMainMenuPatch
                 
                 var inner = new MetaWidgetOld();
                 
-                // 自動更新設定行（現在は使用していない）
-                /*
-                void AutoUpdateContent(string label, MRIPAutoUpdater.AutoUpdateMode mode)
-                {
-                    var currentMode = MRIPAutoUpdater.GetAutoUpdateMode();
-                    List<IMetaParallelPlacableOld> placeable = new List<IMetaParallelPlacableOld>();
-                    
-                    // カテゴリラベル
-                    placeable.Add(new MetaWidgetOld.Text(CategoryAttribute) { RawText = "自動更新" });
-                    placeable.Add(new MetaWidgetOld.HorizonalMargin(0.15f));
-                    
-                    // バージョン名
-                    placeable.Add(new MetaWidgetOld.Text(NameAttribute) { RawText = label });
-                    placeable.Add(new MetaWidgetOld.HorizonalMargin(0.15f));
-                    
-                    // ボタンまたは適用中表示
-                    if (currentMode != mode)
-                    {
-                        placeable.Add(new MetaWidgetOld.Button(() => 
-                        {
-                            MRIPAutoUpdater.SetAutoUpdateMode(mode);
-                            UpdateContents(category);
-                            MetaUI.ShowConfirmDialog(null, new RawTextComponent("自動更新モードを設定しました"));
-                        }, ButtonAttribute) 
-                        { 
-                            RawText = "適用",
-                            PostBuilder = (_, renderer, _) => renderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask
-                        });
-                    }
-                    else
-                    {
-                        placeable.Add(new MetaWidgetOld.HorizonalMargin(0.13f));
-                        placeable.Add(new MetaWidgetOld.Text(ButtonAttribute) { RawText = "適用中" });
-                    }
-                    
-                    inner.Append(new CombinedWidgetOld(0.5f, placeable.ToArray()) { Alignment = IMetaWidgetOld.AlignmentOption.Left });
-                }
-                */
-                
-                // 自動更新ボタンは無効化
+                // 自動更新ボタンは無効化（削除済み）
                 // // 安定版カテゴリの場合に自動更新（安定版）行を表示
                 // if ((category ?? MRIPModUpdater.ReleaseCategory.Major) == MRIPModUpdater.ReleaseCategory.Major)
                 // {

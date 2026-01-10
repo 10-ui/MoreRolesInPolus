@@ -24,7 +24,7 @@ using UnityEngine;
 using Virial.Media;
 using Virial.Text;
 
-namespace MoreRolesInPolus;
+namespace Toa.MoreRolesInPolus.Scripts.Settings;
 
 /// <summary>
 /// MRIPバージョン更新マネージャー
@@ -338,13 +338,6 @@ public static class MRIPModUpdater
             if (success)
             {
                 string message = $"更新のダウンロードが完了しました。\n\nゲームを再起動すると、\n新しいバージョン({DisplayVersion})が適用されます。";
-                
-                // 削除できなかったファイルがあれば通知（次回起動で自動削除されるはずなので簡潔に）
-                if (LastFailedToDeleteFiles.Count > 0)
-                {
-                    message += $"\n\n<color=yellow>※ 古いファイルは次回起動時に自動削除されます</color>";
-                }
-                
                 ShowMessage("ダウンロード完了", message);
             }
             else
@@ -352,11 +345,6 @@ public static class MRIPModUpdater
                 ShowMessage("ダウンロード失敗", errorMessage);
             }
         }
-        
-        /// <summary>
-        /// 削除に失敗したファイル（メッセージ表示用）
-        /// </summary>
-        private static List<string> LastFailedToDeleteFiles = new List<string>();
         
         /// <summary>
         /// ダウンロードとインストールを実行
@@ -418,25 +406,33 @@ public static class MRIPModUpdater
             {
                 string addonsPath = PathHelpers.GameRootPath + Path.DirectorySeparatorChar + "Addons";
                 
-                // 古いMRIPのzipファイルを削除またはリネーム
-                LastFailedToDeleteFiles.Clear();
-                bool allCleared = DeleteOldAddonFiles(addonsPath, LastFailedToDeleteFiles);
+                // 現在のアドオンをDisposeして、zipファイルのロックを解除
+                var currentAddon = MRIPInfo.Addon;
                 
-                // 新しいファイル名（バージョン情報付き）
-                // - 古いファイルが全て削除/リネームできた場合: ! 1つで保存（永遠に増えない）
-                // - 失敗した場合: ! を増やして保存（優先度を上げるため）
-                string prefix;
-                if (allCleared)
+                if (currentAddon != null && !currentAddon.IsBuiltIn)
                 {
-                    prefix = "!";
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("All old files cleared, using single ! prefix"));
+                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Disposing current addon to unlock zip file..."));
+                    
+                    try
+                    {
+                        // 現在のアドオンをDispose（zipファイルをクローズ）
+                        currentAddon.Dispose();
+                        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Current addon disposed successfully"));
+                        
+                        // 少し待機してOSがファイルハンドルを解放するのを待つ
+                        System.Threading.Thread.Sleep(100);
+                    }
+                    catch (Exception ex)
+                    {
+                        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Failed to dispose addon: {ex.Message}"));
+                    }
                 }
-                else
-                {
-                    prefix = GetNextPriorityPrefix(addonsPath);
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Some files not cleared, using prefix: {prefix}"));
-                }
-                string zipPath = Path.Combine(addonsPath, $"{prefix}{MRIPInfo.AddonId}-{VersionForFileName}.zip");
+                
+                // 古いMRIPファイルを直接削除（Dispose後は削除可能！）
+                DeleteOldAddonFiles(addonsPath);
+                
+                // 新しいファイル名（シンプルに保存）
+                string zipPath = Path.Combine(addonsPath, $"{MRIPInfo.AddonId}-{VersionForFileName}.zip");
                 
                 File.WriteAllBytes(zipPath, zipData);
                 NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Update saved to: {zipPath}"));
@@ -453,61 +449,10 @@ public static class MRIPModUpdater
         }
         
         /// <summary>
-        /// 削除予定ファイルのパス
-        /// </summary>
-        private static string GetPendingDeleteFilePath()
-        {
-            return Path.Combine(PathHelpers.GameRootPath, "Addons", "MRIPPendingDelete.txt");
-        }
-        
-        /// <summary>
-        /// 次のダウンロードで使用する優先度プレフィックスを取得
-        /// 既存のMRIPファイルより多くの!を付けて、常に新しいダウンロードが最優先で読み込まれるようにする
+        /// 古いアドオンファイルを削除
         /// </summary>
         /// <param name="addonsPath">Addonsフォルダのパス</param>
-        /// <returns>プレフィックス文字列（例: "!", "!!", "!!!"）</returns>
-        private static string GetNextPriorityPrefix(string addonsPath)
-        {
-            int maxExclamations = 0;
-            
-            try
-            {
-                if (Directory.Exists(addonsPath))
-                {
-                    string[] allZipFiles = Directory.GetFiles(addonsPath, "*.zip");
-                    foreach (string file in allZipFiles)
-                    {
-                        string fileName = Path.GetFileName(file);
-                        if (fileName.Contains(MRIPInfo.AddonId))
-                        {
-                            // 先頭の!の数をカウント
-                            int count = 0;
-                            foreach (char c in fileName)
-                            {
-                                if (c == '!') count++;
-                                else break;
-                            }
-                            if (count > maxExclamations) maxExclamations = count;
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Error getting priority prefix: {ex.Message}"));
-            }
-            
-            // 既存の最大値より1つ多い!を返す（最低1つ）
-            return new string('!', maxExclamations + 1);
-        }
-        
-        /// <summary>
-        /// 古いアドオンファイルを削除（または.oldにリネーム）
-        /// </summary>
-        /// <param name="addonsPath">Addonsフォルダのパス</param>
-        /// <param name="failedFiles">削除に失敗したファイルのリスト（出力用）</param>
-        /// <returns>全ての古いファイルが削除またはリネームに成功した場合true</returns>
-        private static bool DeleteOldAddonFiles(string addonsPath, List<string> failedFiles)
+        private static void DeleteOldAddonFiles(string addonsPath)
         {
             try
             {
@@ -516,7 +461,7 @@ public static class MRIPModUpdater
                 if (!Directory.Exists(addonsPath))
                 {
                     NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"DeleteOldAddonFiles: Directory does not exist: {addonsPath}"));
-                    return true;
+                    return;
                 }
                 
                 // まず既存の.oldファイルを削除（前回の残り）
@@ -557,78 +502,23 @@ public static class MRIPModUpdater
                             NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Delete failed, trying rename: {ex.Message}"));
                         }
                         
-                        // 2. 削除が失敗したらリネームを試みる（Nebula本体と同じ方式）
+                        // 2. 削除が失敗したらリネームを試みる（フォールバック）
                         try
                         {
                             string oldPath = file + ".old";
                             File.Move(file, oldPath, true);
                             NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Renamed old addon file to: {oldPath}"));
-                            continue;
                         }
                         catch (Exception ex)
                         {
                             NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Rename also failed: {ex.Message}"));
-                            failedFiles.Add(fileName);
                         }
                     }
                 }
-                
-                // 削除もリネームも失敗したファイルがあれば、次回起動時に削除するためにマークする
-                if (failedFiles.Count > 0)
-                {
-                    string pendingFile = GetPendingDeleteFilePath();
-                    var fullPaths = failedFiles.Select(f => Path.Combine(addonsPath, f)).ToList();
-                    File.WriteAllLines(pendingFile, fullPaths);
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Marked {failedFiles.Count} files for deletion on next startup"));
-                    return false; // 失敗したファイルあり
-                }
-                
-                return true; // 全て成功
             }
             catch (Exception ex)
             {
                 NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Error cleaning old files: {ex.Message}"));
-                return false;
-            }
-        }
-        
-        /// <summary>
-        /// 起動時に削除予定のファイルを削除する（アドオン読み込み前に呼ばれる必要がある）
-        /// </summary>
-        public static void CleanupPendingDeleteFiles()
-        {
-            try
-            {
-                string pendingFile = GetPendingDeleteFilePath();
-                if (!File.Exists(pendingFile)) return;
-                
-                string[] filesToDelete = File.ReadAllLines(pendingFile);
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"CleanupPendingDeleteFiles: Found {filesToDelete.Length} files to delete"));
-                
-                foreach (string file in filesToDelete)
-                {
-                    if (string.IsNullOrWhiteSpace(file)) continue;
-                    
-                    try
-                    {
-                        if (File.Exists(file))
-                        {
-                            File.Delete(file);
-                            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Deleted pending file: {file}"));
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Failed to delete pending file {file}: {ex.Message}"));
-                    }
-                }
-                
-                // マーカーファイルを削除
-                File.Delete(pendingFile);
-            }
-            catch (Exception ex)
-            {
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Error in CleanupPendingDeleteFiles: {ex.Message}"));
             }
         }
         
@@ -804,19 +694,7 @@ public static class MRIPModUpdater
             MaybeNoMorePages = true;
         }
         
-        // カテゴリ順、バージョン順でソート（スナップショットは日付文字列で比較）
-        releases.Sort((a, b) =>
-        {
-            // カテゴリが同じ場合はバージョンで比較
-            if (a.Category == b.Category)
-            {
-                // 新しい順（降順）
-                return string.Compare(b.VersionForCompare, a.VersionForCompare, StringComparison.Ordinal);
-            }
-            // Majorを先に
-            return a.Category.CompareTo(b.Category);
-        });
-        
+        // GitHubのAPIはリリース順（新しい順）で返すので、そのままの順序を維持
         _cache = releases;
     }
 }

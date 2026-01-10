@@ -7,23 +7,9 @@
  * - MainMenu表示時に自動更新を実行
  */
 
-using System;
 using System.Collections;
-using System.IO;
-using System.Net.Http;
-using System.Text.Json;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
-using Nebula.Modules;
-using Nebula.Modules.MetaWidget;
-using Nebula.Modules.GUIWidget;
-using Nebula.Utilities;
-using UnityEngine;
-using Virial.Compat;
-using Virial.Media;
-using Virial.Text;
-using Virial.Runtime;
 
-namespace MoreRolesInPolus;
+namespace Toa.MoreRolesInPolus.Scripts.Settings;
 
 /// <summary>
 /// MRIP自動更新マネージャー
@@ -146,9 +132,6 @@ public static class MRIPAutoUpdater
         
         try
         {
-            // 前回削除できなかったファイルをクリーンアップ
-            MRIPModUpdater.ReleasedInfo.CleanupPendingDeleteFiles();
-            
             NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("MainMenu loaded, checking for updates..."));
             
             var mode = GetAutoUpdateMode();
