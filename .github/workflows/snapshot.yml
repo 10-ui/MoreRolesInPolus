@@ -24,7 +24,9 @@ jobs:
       id: version
       shell: bash
       run: |
-        DATE=$(date -u +"%y.%m.%d")
+        # JST (Asia/Tokyo) で日付を取得
+        export TZ='Asia/Tokyo'
+        DATE=$(date +"%y.%m.%d")
         
         # 今日の既存タグを取得してサフィックスを決定
         EXISTING_TAGS=$(git tag -l "s,Snapshot_${DATE}*" | wc -l)
