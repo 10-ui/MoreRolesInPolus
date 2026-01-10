@@ -338,13 +338,6 @@ public static class MRIPModUpdater
             if (success)
             {
                 string message = $"更新のダウンロードが完了しました。\n\nゲームを再起動すると、\n新しいバージョン({DisplayVersion})が適用されます。";
-                
-                // 削除できなかったファイルがあれば通知（次回起動で自動削除されるはずなので簡潔に）
-                if (LastFailedToDeleteFiles.Count > 0)
-                {
-                    message += $"\n\n<color=yellow>※ 古いファイルは次回起動時に自動削除されます</color>";
-                }
-                
                 ShowMessage("ダウンロード完了", message);
             }
             else
@@ -352,11 +345,6 @@ public static class MRIPModUpdater
                 ShowMessage("ダウンロード失敗", errorMessage);
             }
         }
-        
-        /// <summary>
-        /// 削除に失敗したファイル（メッセージ表示用）
-        /// </summary>
-        private static List<string> LastFailedToDeleteFiles = new List<string>();
         
         /// <summary>
         /// ダウンロードとインストールを実行
@@ -441,8 +429,7 @@ public static class MRIPModUpdater
                 }
                 
                 // 古いMRIPファイルを直接削除（Dispose後は削除可能！）
-                LastFailedToDeleteFiles.Clear();
-                DeleteOldAddonFiles(addonsPath, LastFailedToDeleteFiles);
+                DeleteOldAddonFiles(addonsPath);
                 
                 // 新しいファイル名（シンプルに保存）
                 string zipPath = Path.Combine(addonsPath, $"{MRIPInfo.AddonId}-{VersionForFileName}.zip");
@@ -462,12 +449,10 @@ public static class MRIPModUpdater
         }
         
         /// <summary>
-        /// 古いアドオンファイルを削除（または.oldにリネーム）
+        /// 古いアドオンファイルを削除
         /// </summary>
         /// <param name="addonsPath">Addonsフォルダのパス</param>
-        /// <param name="failedFiles">削除に失敗したファイルのリスト（出力用）</param>
-        /// <returns>全ての古いファイルが削除またはリネームに成功した場合true</returns>
-        private static bool DeleteOldAddonFiles(string addonsPath, List<string> failedFiles)
+        private static void DeleteOldAddonFiles(string addonsPath)
         {
             try
             {
@@ -476,7 +461,7 @@ public static class MRIPModUpdater
                 if (!Directory.Exists(addonsPath))
                 {
                     NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"DeleteOldAddonFiles: Directory does not exist: {addonsPath}"));
-                    return true;
+                    return;
                 }
                 
                 // まず既存の.oldファイルを削除（前回の残り）
@@ -517,29 +502,23 @@ public static class MRIPModUpdater
                             NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Delete failed, trying rename: {ex.Message}"));
                         }
                         
-                        // 2. 削除が失敗したらリネームを試みる（Nebula本体と同じ方式）
+                        // 2. 削除が失敗したらリネームを試みる（フォールバック）
                         try
                         {
                             string oldPath = file + ".old";
                             File.Move(file, oldPath, true);
                             NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Renamed old addon file to: {oldPath}"));
-                            continue;
                         }
                         catch (Exception ex)
                         {
                             NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Rename also failed: {ex.Message}"));
-                            failedFiles.Add(fileName);
                         }
                     }
                 }
-                
-                // Dispose後は削除できるので、failedFilesがあっても次回は不要
-                return failedFiles.Count == 0;
             }
             catch (Exception ex)
             {
                 NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Error cleaning old files: {ex.Message}"));
-                return false;
             }
         }
         
