@@ -1,12 +1,3 @@
-/**
- * @file MRIPModUpdater.cs
- * @brief MRIPアドオンのバージョン一覧取得・更新機能
- * @details
- * - GitHub Releases APIからバージョン一覧を取得
- * - タグ形式: "v,v0.1.6"（安定版）、"s,Snapshot_26.01.05c"（スナップショット）
- * - バージョン選択UIに使用されるデータを管理
- */
-
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -29,42 +20,16 @@ namespace Toa.MoreRolesInPolus.Scripts.Settings;
 /// </summary>
 public static class MRIPModUpdater
 {
-    /// <summary>
-    /// GitHubリポジトリ情報
-    /// </summary>
     private const string GitHubOwner = "10-ui";
     private const string GitHubRepo = "MoreRolesInPolus";
-    
-    /// <summary>
-    /// ページあたりの取得数
-    /// </summary>
     private const int PerPage = 30;
     
-    /// <summary>
-    /// GitHub APIエンドポイント
-    /// </summary>
-    /// <param name="page">ページ番号</param>
-    /// <returns>API URL</returns>
     private static string GetReleasesUrl(int page) => $"https://api.github.com/repos/{GitHubOwner}/{GitHubRepo}/releases?per_page={PerPage}&page={page}";
     
-    /// <summary>
-    /// 次に取得するページ番号
-    /// </summary>
     private static int NextPage = 1;
-    
-    /// <summary>
-    /// キャッシュされたバージョン一覧
-    /// </summary>
     private static List<ReleasedInfo>? _cache = null;
     
-    /// <summary>
-    /// キャッシュされたバージョン一覧（読み取り専用）
-    /// </summary>
     public static List<ReleasedInfo>? Cache => _cache;
-    
-    /// <summary>
-    /// これ以上ページがないかどうか
-    /// </summary>
     public static bool MaybeNoMorePages { get; private set; } = false;
     
     /// <summary>
@@ -79,7 +44,6 @@ public static class MRIPModUpdater
     
     /// <summary>
     /// アドオン読み込み直後に古いMRIPファイルを削除
-    /// この時点で古いファイルは読み込みスキップされてDispose()済み = ロック解除済み
     /// </summary>
     public static void CleanupOldAddonFiles()
     {
@@ -88,17 +52,8 @@ public static class MRIPModUpdater
             string addonsPath = PathHelpers.GameRootPath + Path.DirectorySeparatorChar + "Addons";
             if (!Directory.Exists(addonsPath)) return;
             
-            // 現在読み込まれているMRIPアドオンの情報を取得
-            var currentAddon = MRIPInfo.Addon;
-            if (currentAddon == null)
-            {
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix("CleanupOldAddonFiles: Current addon not found"));
-                return;
-            }
+            if (MRIPInfo.Addon == null) return;
             
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"CleanupOldAddonFiles: Starting cleanup... (AddonId={MRIPInfo.AddonId})"));
-            
-            // MRIPに関連する全ファイル（.zip, .old）を検索
             var filesToDelete = new List<string>();
             
             foreach (string file in Directory.GetFiles(addonsPath))
@@ -106,50 +61,30 @@ public static class MRIPModUpdater
                 string fileName = Path.GetFileName(file);
                 string ext = Path.GetExtension(file).ToLower();
                 
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"CleanupOldAddonFiles: Checking file: {fileName}"));
-                
-                // .zipまたは.oldファイルで、MRIPのIDを含むもの
                 if ((ext == ".zip" || ext == ".old") && fileName.Contains(MRIPInfo.AddonId))
                 {
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"CleanupOldAddonFiles: Matched MRIP file: {fileName}"));
                     filesToDelete.Add(file);
                 }
             }
             
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"CleanupOldAddonFiles: Found {filesToDelete.Count} MRIP files"));
+            if (filesToDelete.Count <= 1) return;
             
-            if (filesToDelete.Count <= 1)
-            {
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("CleanupOldAddonFiles: No old files to delete (only 0-1 file found)"));
-                return;
-            }
-            
-            // !の数でソート（多い順）、最初のファイル（最優先で読み込まれたもの）は残す
             filesToDelete.Sort((a, b) =>
             {
                 int countA = Path.GetFileName(a).TakeWhile(c => c == '!').Count();
                 int countB = Path.GetFileName(b).TakeWhile(c => c == '!').Count();
-                return countB.CompareTo(countA); // 多い順
+                return countB.CompareTo(countA);
             });
             
-            string currentFile = filesToDelete[0];
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"CleanupOldAddonFiles: Keeping current file: {Path.GetFileName(currentFile)}"));
-            
-            // 2番目以降を削除
-            // ※ 現在のファイルのリネーム（!の正規化）はロック中のため不可
-            // 　 !は毎回増えるが、実用上問題ない（100回DLしても100文字程度）
             for (int i = 1; i < filesToDelete.Count; i++)
             {
-                string file = filesToDelete[i];
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"CleanupOldAddonFiles: Attempting to delete: {Path.GetFileName(file)}"));
                 try
                 {
-                    File.Delete(file);
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"CleanupOldAddonFiles: SUCCESS - Deleted: {Path.GetFileName(file)}"));
+                    File.Delete(filesToDelete[i]);
                 }
                 catch (Exception ex)
                 {
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"CleanupOldAddonFiles: FAILED - {Path.GetFileName(file)}: {ex.Message}"));
+                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Failed to delete old file: {ex.Message}"));
                 }
             }
         }
@@ -159,31 +94,19 @@ public static class MRIPModUpdater
         }
     }
     
-    /// <summary>
-    /// リリースカテゴリ
-    /// </summary>
     public enum ReleaseCategory
     {
-        /// <summary>安定版</summary>
         Major,
-        /// <summary>スナップショット</summary>
         Snapshot,
-        /// <summary>不明</summary>
         Unknown
     }
     
-    /// <summary>
-    /// カテゴリごとの表示色
-    /// </summary>
     public static readonly UnityEngine.Color[] CategoryColors = {
-        new UnityEngine.Color(176f / 255f, 204f / 255f, 251f / 255f),  // Major: 青系
-        new UnityEngine.Color(247f / 255f, 255f / 255f, 29f / 255f),   // Snapshot: 黄色
-        new UnityEngine.Color(141f / 255f, 141f / 255f, 141f / 255f)   // Unknown: グレー
+        new UnityEngine.Color(176f / 255f, 204f / 255f, 251f / 255f),
+        new UnityEngine.Color(247f / 255f, 255f / 255f, 29f / 255f),
+        new UnityEngine.Color(141f / 255f, 141f / 255f, 141f / 255f)
     };
     
-    /// <summary>
-    /// カテゴリごとの翻訳キー（日本語直接指定）
-    /// </summary>
     public static readonly string[] CategoryNames = {
         "安定版",
         "スナップショット",
@@ -195,41 +118,20 @@ public static class MRIPModUpdater
     /// </summary>
     public class ReleasedInfo
     {
-        /// <summary>カテゴリ</summary>
         public ReleaseCategory Category { get; private set; }
-        
-        /// <summary>表示用バージョン名（例: "v0.1.6", "Snapshot 26.01.05c"）</summary>
         public string DisplayVersion { get; private set; }
-        
-        /// <summary>GitHubのタグ名（例: "v,v0.1.6", "s,Snapshot_26.01.05c"）</summary>
         public string RawTag { get; private set; }
-        
-        /// <summary>リリースボディ（説明文）</summary>
         public string? Body { get; private set; }
-        
-        /// <summary>ダウンロードURL（.zipファイル）</summary>
         public string? DownloadUrl { get; private set; }
-        
-        /// <summary>addon.metaのVersionと比較用の値</summary>
         public string VersionForCompare { get; private set; }
-        
-        /// <summary>ファイル名用のバージョン文字列（例: "v0.1.6", "Snapshot_26.01.05c"）</summary>
         public string VersionForFileName { get; private set; }
         
-        /// <summary>
-        /// コンストラクタ
-        /// </summary>
-        /// <param name="tag">GitHubタグ名</param>
-        /// <param name="body">リリース説明文</param>
-        /// <param name="downloadUrl">ダウンロードURL</param>
         public ReleasedInfo(string tag, string? body, string? downloadUrl)
         {
             RawTag = tag;
             Body = body;
             DownloadUrl = downloadUrl;
             
-            // タグをパース
-            // 形式: "v,v0.1.6" または "s,Snapshot_26.01.05c"
             string[] parts = tag.Split(',');
             
             if (parts.Length >= 2)
@@ -241,21 +143,15 @@ public static class MRIPModUpdater
                 {
                     case "v":
                         Category = ReleaseCategory.Major;
-                        // "v0.1.6" → "v0.1.6"（そのまま）
                         DisplayVersion = version;
-                        // 比較用: "0.1.6"（vを除去）
                         VersionForCompare = version.StartsWith("v") ? version.Substring(1) : version;
-                        // ファイル名用: "v0.1.6"（そのまま）
                         VersionForFileName = version;
                         break;
                         
                     case "s":
                         Category = ReleaseCategory.Snapshot;
-                        // "Snapshot_26.01.05c" → "Snapshot 26.01.05c"（アンダースコアをスペースに）
                         DisplayVersion = version.Replace('_', ' ');
-                        // 比較用: そのまま
                         VersionForCompare = version;
-                        // ファイル名用: "Snapshot_26.01.05c"（そのまま、アンダースコア維持）
                         VersionForFileName = version;
                         break;
                         
@@ -269,7 +165,6 @@ public static class MRIPModUpdater
             }
             else
             {
-                // パース失敗
                 Category = ReleaseCategory.Unknown;
                 DisplayVersion = tag;
                 VersionForCompare = tag;
@@ -280,7 +175,6 @@ public static class MRIPModUpdater
         /// <summary>
         /// 現在インストールされているバージョンかどうか
         /// </summary>
-        /// <returns>現在のバージョンならtrue</returns>
         public bool IsCurrentVersion()
         {
             string currentVersion = MRIPInfo.Version;
@@ -290,7 +184,6 @@ public static class MRIPModUpdater
         /// <summary>
         /// 更新をダウンロードしてインストール
         /// </summary>
-        /// <returns>コルーチン</returns>
         public IEnumerator CoUpdateAndShowDialog()
         {
             if (string.IsNullOrEmpty(DownloadUrl))
@@ -299,7 +192,6 @@ public static class MRIPModUpdater
                 yield break;
             }
             
-            // ダウンロード中のウィンドウを表示
             MetaScreen downloadWindow = MetaScreen.GenerateWindow(
                 new UnityEngine.Vector2(3.5f, 1.5f),
                 DestroyableSingleton<HudManager>.InstanceExists ? DestroyableSingleton<HudManager>.Instance.transform : null,
@@ -320,7 +212,6 @@ public static class MRIPModUpdater
                 out size
             );
             
-            // ダウンロード実行
             bool success = false;
             string errorMessage = "";
             
@@ -332,7 +223,6 @@ public static class MRIPModUpdater
             
             downloadWindow.CloseScreen();
             
-            // 結果表示
             if (success)
             {
                 string message = $"更新のダウンロードが完了しました。\n\nゲームを再起動すると、\n新しいバージョン({DisplayVersion})が適用されます。";
@@ -344,9 +234,6 @@ public static class MRIPModUpdater
             }
         }
         
-        /// <summary>
-        /// ダウンロードとインストールを実行
-        /// </summary>
         private IEnumerator CoDownloadAndInstall(string url, Action<bool, string> callback)
         {
             NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Downloading from: {url}"));
@@ -354,7 +241,6 @@ public static class MRIPModUpdater
             HttpClient client = GetHttpClient();
             HttpResponseMessage? response = null;
             
-            // ダウンロード
             var downloadTask = client.GetAsync(url);
             while (!downloadTask.IsCompleted)
             {
@@ -378,7 +264,6 @@ public static class MRIPModUpdater
                 yield break;
             }
             
-            // ファイル読み取り
             var contentTask = response.Content.ReadAsByteArrayAsync();
             while (!contentTask.IsCompleted)
             {
@@ -397,27 +282,16 @@ public static class MRIPModUpdater
                 yield break;
             }
             
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Downloaded {zipData.Length} bytes."));
-            
-            // Addonsフォルダに保存
             try
             {
                 string addonsPath = PathHelpers.GameRootPath + Path.DirectorySeparatorChar + "Addons";
-                
-                // 現在のアドオンをDisposeして、zipファイルのロックを解除
                 var currentAddon = MRIPInfo.Addon;
                 
                 if (currentAddon != null && !currentAddon.IsBuiltIn)
                 {
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Disposing current addon to unlock zip file..."));
-                    
                     try
                     {
-                        // 現在のアドオンをDispose（zipファイルをクローズ）
                         currentAddon.Dispose();
-                        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Current addon disposed successfully"));
-                        
-                        // 少し待機してOSがファイルハンドルを解放するのを待つ
                         System.Threading.Thread.Sleep(100);
                     }
                     catch (Exception ex)
@@ -426,14 +300,10 @@ public static class MRIPModUpdater
                     }
                 }
                 
-                // 古いMRIPファイルを直接削除（Dispose後は削除可能！）
                 DeleteOldAddonFiles(addonsPath);
                 
-                // 新しいファイル名（シンプルに保存）
                 string zipPath = Path.Combine(addonsPath, $"{MRIPInfo.AddonId}-{VersionForFileName}.zip");
-                
                 File.WriteAllBytes(zipPath, zipData);
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Update saved to: {zipPath}"));
                 
                 callback(true, "");
             }
@@ -449,67 +319,35 @@ public static class MRIPModUpdater
         /// <summary>
         /// 古いアドオンファイルを削除
         /// </summary>
-        /// <param name="addonsPath">Addonsフォルダのパス</param>
         private static void DeleteOldAddonFiles(string addonsPath)
         {
             try
             {
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"DeleteOldAddonFiles: Checking path: {addonsPath}"));
+                if (!Directory.Exists(addonsPath)) return;
                 
-                if (!Directory.Exists(addonsPath))
-                {
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"DeleteOldAddonFiles: Directory does not exist: {addonsPath}"));
-                    return;
-                }
-                
-                // まず既存の.oldファイルを削除（前回の残り）
                 foreach (string oldFile in Directory.GetFiles(addonsPath, "*.old"))
                 {
                     if (Path.GetFileName(oldFile).Contains(MRIPInfo.AddonId))
                     {
-                        try
-                        {
-                            File.Delete(oldFile);
-                            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Deleted old backup file: {oldFile}"));
-                        }
-                        catch { /* 無視 */ }
+                        try { File.Delete(oldFile); } catch { }
                     }
                 }
                 
-                // ファイル名に "MoreRolesInPolus" が含まれる .zip ファイルを検索して削除
-                string[] allZipFiles = Directory.GetFiles(addonsPath, "*.zip");
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"DeleteOldAddonFiles: Found {allZipFiles.Length} zip files"));
-                
-                foreach (string file in allZipFiles)
+                foreach (string file in Directory.GetFiles(addonsPath, "*.zip"))
                 {
-                    string fileName = Path.GetFileName(file);
-                    
-                    if (fileName.Contains(MRIPInfo.AddonId))
+                    if (Path.GetFileName(file).Contains(MRIPInfo.AddonId))
                     {
-                        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"DeleteOldAddonFiles: Processing file: {fileName}"));
-                        
-                        // 1. まず削除を試みる
                         try
                         {
                             File.Delete(file);
-                            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Deleted old addon file: {file}"));
-                            continue;
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Delete failed, trying rename: {ex.Message}"));
-                        }
-                        
-                        // 2. 削除が失敗したらリネームを試みる（フォールバック）
-                        try
-                        {
-                            string oldPath = file + ".old";
-                            File.Move(file, oldPath, true);
-                            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Renamed old addon file to: {oldPath}"));
-                        }
-                        catch (Exception ex)
-                        {
-                            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Rename also failed: {ex.Message}"));
+                            try
+                            {
+                                File.Move(file, file + ".old", true);
+                            }
+                            catch { }
                         }
                     }
                 }
@@ -520,12 +358,8 @@ public static class MRIPModUpdater
             }
         }
         
-        /// <summary>
-        /// メッセージウィンドウを表示
-        /// </summary>
         private static void ShowMessage(string title, string message)
         {
-            // メッセージの長さに応じてウィンドウサイズを調整
             int lineCount = message.Split('\n').Length;
             float height = Math.Max(2.5f, 1.5f + lineCount * 0.25f);
             
@@ -561,9 +395,6 @@ public static class MRIPModUpdater
         }
     }
     
-    /// <summary>
-    /// GitHub API レスポンス: リリース情報
-    /// </summary>
     private class GitHubReleaseResponse
     {
         [JsonSerializableField]
@@ -576,9 +407,6 @@ public static class MRIPModUpdater
         public List<GitHubAssetResponse>? assets = null;
     }
     
-    /// <summary>
-    /// GitHub API レスポンス: アセット情報
-    /// </summary>
     private class GitHubAssetResponse
     {
         [JsonSerializableField]
@@ -591,22 +419,14 @@ public static class MRIPModUpdater
     /// <summary>
     /// バージョン一覧を取得するコルーチン
     /// </summary>
-    /// <param name="postAction">取得完了後のコールバック</param>
-    /// <returns>コルーチン</returns>
     public static IEnumerator CoFetchVersionTags(Action<List<ReleasedInfo>> postAction)
     {
         yield return FetchAsync().WaitAsCoroutine();
         postAction.Invoke(_cache ?? new List<ReleasedInfo>());
     }
     
-    /// <summary>
-    /// HTTPクライアント（User-Agent付き）
-    /// </summary>
     private static HttpClient? _httpClient = null;
     
-    /// <summary>
-    /// HTTPクライアントを取得（User-Agent付き）
-    /// </summary>
     private static HttpClient GetHttpClient()
     {
         if (_httpClient == null)
@@ -617,9 +437,6 @@ public static class MRIPModUpdater
         return _httpClient;
     }
     
-    /// <summary>
-    /// 非同期でバージョン一覧を取得
-    /// </summary>
     private static async System.Threading.Tasks.Task FetchAsync()
     {
         List<ReleasedInfo> releases = new List<ReleasedInfo>(_cache ?? new List<ReleasedInfo>());
@@ -637,7 +454,6 @@ public static class MRIPModUpdater
                 
                 int lastCount = releases.Count;
                 
-                // JsonStructureを使ってデシリアライズ
                 List<GitHubReleaseResponse>? releaseList = null;
                 using (var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)))
                 {
@@ -650,7 +466,6 @@ public static class MRIPModUpdater
                     {
                         if (string.IsNullOrEmpty(release.tag_name)) continue;
                         
-                        // .zipファイルのダウンロードURLを探す
                         string? downloadUrl = null;
                         if (release.assets != null)
                         {
@@ -664,7 +479,6 @@ public static class MRIPModUpdater
                             }
                         }
                         
-                        // リリース情報を追加
                         releases.Add(new ReleasedInfo(
                             release.tag_name,
                             release.body?.Replace("\\n", "\n").Replace("\\r", ""),
@@ -673,9 +487,6 @@ public static class MRIPModUpdater
                     }
                 }
                 
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"{releases.Count} releases fetched from GitHub."));
-                
-                // 取得数が増えていなければこれ以上ページがない
                 if (releases.Count == lastCount)
                 {
                     MaybeNoMorePages = true;
@@ -697,7 +508,6 @@ public static class MRIPModUpdater
             MaybeNoMorePages = true;
         }
         
-        // GitHubのAPIはリリース順（新しい順）で返すので、そのままの順序を維持
         _cache = releases;
     }
 }
