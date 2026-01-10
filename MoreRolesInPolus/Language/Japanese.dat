@@ -25,7 +25,9 @@
 "options.role.researcher.surveytime" : "遡れる時間"
 "options.role.researcher.maxsurvey" : "調査可能回数"
 "options.role.researcher.detail" : "リサーチャーは他のプレイヤーの過去の行動を調査できます。<br>ログを辿った先に見える真実は希望か、絶望か。"
-"button.label.survey" : "調査"
+"button.label.researcher.survey" : "調査"
+"button.label.researcher.track" : "追跡"
+"ui.action.researcher.switch" : "モード切替"
 
 ### junjun Made
 

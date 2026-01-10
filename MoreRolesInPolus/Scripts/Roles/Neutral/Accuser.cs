@@ -36,6 +36,8 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
     {
     }
 
+    Image? DefinedAssignable.IconImage => (Guesser.MyEvilRole as DefinedRole).IconImage;
+    static private readonly Image researchSprite = NebulaAPI.AddonAsset.GetResource(string.Format("Crewmate/Researcher/ResearchButton.png"))!.AsImage(115f)!;
     RuntimeRole RuntimeAssignableGenerator<RuntimeRole>.CreateInstance(GamePlayer player, int[] arguments) => new Instance(player, arguments);
 
     public class Instance : RuntimeAssignableTemplate, RuntimeRole
