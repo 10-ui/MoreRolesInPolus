@@ -33,7 +33,7 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
     {
     }
 
-    Image? DefinedAssignable.IconImage => researchSprite;
+    Image? DefinedAssignable.IconImage => (Guesser.MyEvilRole as DefinedRole).IconImage;
     static private readonly Image researchSprite = NebulaAPI.AddonAsset.GetResource(string.Format("Crewmate/Researcher/ResearchButton.png"))!.AsImage(115f)!;
 
     static private IntegerConfiguration NumOfGuessToWinOption = NebulaAPI.Configurations.Configuration("options.role.accuser.NumOfGuessToWinOption", (1, 10), 2);
