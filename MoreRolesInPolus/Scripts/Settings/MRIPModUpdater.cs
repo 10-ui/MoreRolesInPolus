@@ -13,8 +13,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Net.Http;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Nebula.Modules;
 using Nebula.Modules.MetaWidget;
@@ -568,14 +566,14 @@ public static class MRIPModUpdater
     /// </summary>
     private class GitHubReleaseResponse
     {
-        [JsonPropertyName("tag_name")]
-        public string? TagName { get; set; }
+        [JsonSerializableField]
+        public string? tag_name = null;
         
-        [JsonPropertyName("body")]
-        public string? Body { get; set; }
+        [JsonSerializableField]
+        public string? body = null;
         
-        [JsonPropertyName("assets")]
-        public List<GitHubAssetResponse>? Assets { get; set; }
+        [JsonSerializableField]
+        public List<GitHubAssetResponse>? assets = null;
     }
     
     /// <summary>
@@ -583,11 +581,11 @@ public static class MRIPModUpdater
     /// </summary>
     private class GitHubAssetResponse
     {
-        [JsonPropertyName("name")]
-        public string? Name { get; set; }
+        [JsonSerializableField]
+        public string? name = null;
         
-        [JsonPropertyName("browser_download_url")]
-        public string? BrowserDownloadUrl { get; set; }
+        [JsonSerializableField]
+        public string? browser_download_url = null;
     }
     
     /// <summary>
@@ -639,23 +637,28 @@ public static class MRIPModUpdater
                 
                 int lastCount = releases.Count;
                 
-                var releaseList = JsonSerializer.Deserialize<List<GitHubReleaseResponse>>(json);
+                // JsonStructureを使ってデシリアライズ
+                List<GitHubReleaseResponse>? releaseList = null;
+                using (var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json)))
+                {
+                    releaseList = JsonStructure.Deserialize<List<GitHubReleaseResponse>>(stream);
+                }
                 
                 if (releaseList != null)
                 {
                     foreach (var release in releaseList)
                     {
-                        if (string.IsNullOrEmpty(release.TagName)) continue;
+                        if (string.IsNullOrEmpty(release.tag_name)) continue;
                         
                         // .zipファイルのダウンロードURLを探す
                         string? downloadUrl = null;
-                        if (release.Assets != null)
+                        if (release.assets != null)
                         {
-                            foreach (var asset in release.Assets)
+                            foreach (var asset in release.assets)
                             {
-                                if (asset.Name != null && asset.Name.EndsWith(".zip"))
+                                if (asset.name != null && asset.name.EndsWith(".zip"))
                                 {
-                                    downloadUrl = asset.BrowserDownloadUrl;
+                                    downloadUrl = asset.browser_download_url;
                                     break;
                                 }
                             }
@@ -663,8 +666,8 @@ public static class MRIPModUpdater
                         
                         // リリース情報を追加
                         releases.Add(new ReleasedInfo(
-                            release.TagName,
-                            release.Body?.Replace("\\n", "\n").Replace("\\r", ""),
+                            release.tag_name,
+                            release.body?.Replace("\\n", "\n").Replace("\\r", ""),
                             downloadUrl
                         ));
                     }

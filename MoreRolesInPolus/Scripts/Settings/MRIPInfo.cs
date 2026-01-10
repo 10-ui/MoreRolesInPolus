@@ -1,6 +1,6 @@
 /**
  * @file MRIPInfo.cs
- * @brief MRIPアドオンの情報を一元管理（addon.metaから取得）
+ * @brief MRIPアドオンの情報を一元管理
  */
 namespace Toa.MoreRolesInPolus.Scripts.Settings;
 
