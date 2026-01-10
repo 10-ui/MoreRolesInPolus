@@ -10,18 +10,20 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
 {
 
 
-    private Barclaw() : base("barclaw", "barclaw", new(180, 0, 0))
+    private Barclaw() : base("barclaw", "barclaw", new(118, 118, 118), [NumOfDeadRequired, ShowMeetingInFlash, MeetingDelayOption, MeetingDelayDispersionOption, allowGhostMeeting])
     {
 
     }
+    static private readonly IntegerConfiguration NumOfDeadRequired = NebulaAPI.Configurations.Configuration("options.role.barclaw.numOfDeadRequired", (1, 5), 2);
+    static private readonly BoolConfiguration ShowMeetingInFlash = NebulaAPI.Configurations.Configuration("options.role.barclaw.showMeetingInFlash", false);
+    static private readonly FloatConfiguration MeetingDelayOption = NebulaAPI.Configurations.Configuration("options.role.barclaw.meetingDelayOption", (0f, 5f, 0.5f), 2f, FloatConfigurationDecorator.Second);
+    static private readonly FloatConfiguration MeetingDelayDispersionOption = NebulaAPI.Configurations.Configuration("options.role.barclaw.meetingDelayDispersionOption", (0f, 10f, 0.25f), 3f, FloatConfigurationDecorator.Second);
+    //死んでいても緊急会議がが発動するか
+    static private readonly BoolConfiguration allowGhostMeeting = NebulaAPI.Configurations.Configuration("options.role.barclaw.allowGhostMeeting", false);
+
 
     static public Barclaw MyRole = new Barclaw();
     RuntimeModifier RuntimeAssignableGenerator<RuntimeModifier>.CreateInstance(GamePlayer player, int[] arguments) => new Instance(player);
-
-    static private readonly IntegerConfiguration NumOfDeadRequired = NebulaAPI.Configurations.Configuration("options.role.barclaw.numOfDeadRequired", (1, 5), 2);
-    static private readonly BoolConfiguration ShowMeetingInFlash = NebulaAPI.Configurations.Configuration("options.role.barclaw.ShowMeetingInFlash", false);
-    static private readonly FloatConfiguration MeetingDelayOption = NebulaAPI.Configurations.Configuration("options.role.barclaw.meetingDelayOption", (0f, 5f, 0.5f), 0f, FloatConfigurationDecorator.Second);
-    static private readonly FloatConfiguration MeetingDelayDispersionOption = NebulaAPI.Configurations.Configuration("options.role.barclaw.MeetingDelayDispersionOption", (0f, 10f, 0.25f), 0.5f, FloatConfigurationDecorator.Second);
 
 
     public class Instance : RuntimeAssignableTemplate, RuntimeModifier
@@ -53,13 +55,6 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
                 numOfKillCount++;
                 deadPlayer.Add(ev.Dead);
 
-                NebulaAPI.CurrentGame?.GetModule<TitleShower>()?.SetText(
-                    numOfKillCount.ToString() + ":" + ev.Dead.PlayerName, // int を string に変換
-                    new(100, 100, 100),
-                    5.5f,
-                    true
-                );
-
                 if (numOfKillCount >= NumOfDeadRequired && !myDead)
                 {
 
@@ -69,11 +64,23 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
                     
 
                     if(nowMeeting) return;
-                    CallMeetingHelper.CallMeeting(MyPlayer);
+                    NebulaManager.Instance.StartCoroutine(WaitAndCallCoroutine(t).WrapToIl2Cpp());
+
                 }
             }
         }
+        // t秒待ってからミーティングを呼ぶコルーチン
+        System.Collections.IEnumerator WaitAndCallCoroutine(float t)
+        {
+            yield return new UnityEngine.WaitForSeconds(t);
 
+            // 待機後に条件がまだ満たされていれば実行
+            if (!AmOwner) yield break;
+            if (nowMeeting) yield break;
+            if (myDead && !allowGhostMeeting) yield break;
+
+            CallMeetingHelper.CallMeeting(MyPlayer);
+        }
 
 
         [Local]
@@ -89,12 +96,6 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
                     }
                     numOfKillCount--;
                     deadPlayer.Remove(ev.Revived);
-                    NebulaAPI.CurrentGame?.GetModule<TitleShower>()?.SetText(
-                        numOfKillCount.ToString() + ":" + ev.Revived.PlayerName, // int を string に変換
-                        new(100, 100, 100),
-                        5.5f,
-                        true
-                    );
                 }
             }
         }
