@@ -71,6 +71,7 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
                     float t = Mathn.Max(0.1f, meetingDelayOption) + meetingDelayDispersionOption * (float)System.Random.Shared.NextDouble();
                     
 
+
                     if(nowMeeting) return;
                     NebulaManager.Instance.StartCoroutine(WaitAndCallCoroutine(t).WrapToIl2Cpp());
                     numOfButtonCount ++;
