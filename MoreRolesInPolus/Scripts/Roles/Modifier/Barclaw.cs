@@ -61,9 +61,9 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
                 }
 
                 numOfKillCount++;
-                deadPlayer.Add(ev.Dead);
+                deadPlayer.Add(ev.Dead); numOfMaxButton
 
-                if (numOfKillCount >= numOfDeadRequired && !myDead && numOfButtonCount >= numOfMaxButton)
+                if (numOfKillCount >= numOfDeadRequired && !myDead && numOfMaxButton >= numOfButtonCount)
                 {
                     if(enableAfterSecondTurn && 2 <= nowTurn) return;
                     if(showMeetingInFlash) AmongUsUtil.PlayQuickFlash(MyRole.UnityColor);
