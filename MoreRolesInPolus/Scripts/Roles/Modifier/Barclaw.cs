@@ -61,7 +61,7 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
                 }
 
                 numOfKillCount++;
-                deadPlayer.Add(ev.Dead); numOfMaxButton
+                deadPlayer.Add(ev.Dead); 
 
                 if (numOfKillCount >= numOfDeadRequired && !myDead && numOfMaxButton >= numOfButtonCount)
                 {
