@@ -313,7 +313,7 @@ public static class MRIPMainMenuPatch
             var textMeshPros = mripButtonObj.GetComponentsInChildren<TextMeshPro>(true);
             foreach (var tmp in textMeshPros)
             {
-                tmp.text = $"{MRIPInfo.ShortName}設定";
+                tmp.text = Language.Translate("settings.mrip.button.name").Replace("*", "");
                 NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Set button text: {tmp.text}"));
             }
             
@@ -411,7 +411,7 @@ public static class MRIPMainMenuPatch
                 menuWidget.Append(new MetaWidgetOld.Button(() => UpdateContents(cat), 
                     new TextAttributeOld(TextAttributeOld.BoldAttr) { Size = new UnityEngine.Vector2(0.95f, 0.28f) }) 
                 { 
-                    RawText = MRIPModUpdater.CategoryNames[(int)category] 
+                    RawText = Language.Translate(MRIPModUpdater.CategoryNames[(int)category]).Replace("*", "")
                 });
             }
             
@@ -440,7 +440,7 @@ public static class MRIPMainMenuPatch
             {
                 if (versions == null || versions.Count == 0)
                 {
-                    innerRef.Value?.SetWidget(new MetaWidgetOld.Text(NameAttribute) { RawText = "バージョン情報を読み込み中..." });
+                    innerRef.Value?.SetWidget(new MetaWidgetOld.Text(NameAttribute) { RawText = Language.Translate("settings.mrip.loading").Replace("*", "") });
                     return;
                 }
                 
@@ -470,11 +470,13 @@ public static class MRIPMainMenuPatch
                         List<IMetaParallelPlacableOld> placeable = new List<IMetaParallelPlacableOld>();
                         
                         // カテゴリラベル（色付き）
+                        string startKey = MRIPModUpdater.CategoryNames[(int)version.Category];
+                        
                         placeable.Add(new MetaWidgetOld.Text(CategoryAttribute) 
                         { 
-                            MyText = NebulaGUIWidgetEngine.Instance.TextComponent(
+                            MyText = new Nebula.Utilities.ColorTextComponent(
                                 MRIPModUpdater.CategoryColors[(int)version.Category], 
-                                MRIPModUpdater.CategoryNames[(int)version.Category])
+                                NebulaGUIWidgetEngine.Instance.RawTextComponent(Language.Translate(startKey).Replace("*", "")))
                         });
                         placeable.Add(new MetaWidgetOld.HorizonalMargin(0.15f));
                         
@@ -506,7 +508,7 @@ public static class MRIPMainMenuPatch
                         {
                             // 現在のバージョン
                             placeable.Add(new MetaWidgetOld.HorizonalMargin(0.13f));
-                            placeable.Add(new MetaWidgetOld.Text(ButtonAttribute) { RawText = "使用中" });
+                            placeable.Add(new MetaWidgetOld.Text(ButtonAttribute) { RawText = Language.Translate("settings.mrip.status.current").Replace("*", "") });
                         }
                         else if (!string.IsNullOrEmpty(version.DownloadUrl))
                         {
@@ -516,7 +518,7 @@ public static class MRIPMainMenuPatch
                                 NebulaManager.Instance.StartCoroutine(version.CoUpdateAndShowDialog().WrapToIl2Cpp());
                             }, ButtonAttribute) 
                             { 
-                                RawText = "取得",
+                                RawText = Language.Translate("settings.mrip.button.get").Replace("*", ""),
                                 PostBuilder = (_, renderer, _) => renderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask
                             });
                         }
@@ -548,7 +550,7 @@ public static class MRIPMainMenuPatch
                     }, ButtonAttribute)
                     { 
                         Alignment = IMetaWidgetOld.AlignmentOption.Center, 
-                        RawText = "もっと読み込む",
+                        RawText = Language.Translate("settings.mrip.button.more").Replace("*", ""),
                         PostBuilder = (_, renderer, _) => renderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask
                     });
                 }

@@ -61,3 +61,20 @@
 "options.role.barclaw.meetingDelayOption" : "会議が始まるまでの遅延"
 "options.role.barclaw.meetingDelayDispersionOption" : "会議が始まるまでの遅延のばらつき"
 "options.role.barclaw.allowGhostMeeting" : "死んでいても通報が入るか"
+
+# Settings
+"settings.mrip.category.stable" : "安定版"
+"settings.mrip.category.snapshot" : "スナップショット"
+"settings.mrip.category.unknown" : "不明"
+"settings.mrip.downloading" : "更新をダウンロード中..."
+"settings.mrip.update.message" : "更新のダウンロードが完了しました。\n\nゲームを再起動すると、\n新しいバージョン(%VERSION%)が適用されます。"
+"settings.mrip.update.title" : "ダウンロード完了"
+"settings.mrip.update.failed" : "ダウンロード失敗"
+"settings.mrip.dialog.title" : "MRIP設定"
+"settings.mrip.dialog.ok" : "OK"
+"settings.mrip.button.name" : "MRIP設定"
+"settings.mrip.loading" : "バージョン情報を読み込み中..."
+"settings.mrip.status.current" : "使用中"
+"settings.mrip.button.get" : "取得"
+"settings.mrip.button.more" : "もっと読み込む"
+
