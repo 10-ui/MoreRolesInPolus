@@ -2,12 +2,14 @@
 namespace MoreRolesInPolus.Roles.Imposter;
 
 using Nebula.Modules;
-using Nebula.Modules.MetaWidget;
 using Nebula.Utilities;
-using Nebula.Behavior;
-using TMPro;
 using UnityEngine;
+using System.Linq;
 using MoreRolesInPolus.Helpers;
+using Nebula.Player;
+using Virial.Game;
+using Il2CppInterop.Runtime;
+using Virial.Events.Game.Minimap;
 
 /// <summary>
 /// Coordinatorロールの情報を定義するクラスです。
@@ -49,12 +51,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         /// <summary>
         /// 選択されたターゲットプレイヤー
         /// </summary>
-        private GamePlayer? SelectedTarget = null;
-
-        /// <summary>
-        /// プレイヤー選択画面のMetaScreen参照
-        /// </summary>
-        private MetaScreen? PlayerSelectScreen = null;
+        private GamePlayer SelectedTarget = null;
 
         /// <summary>
         /// 部屋選択画面のMetaScreen参照
@@ -101,6 +98,16 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         static TextAttributeOld ButtonAttribute = new TextAttributeOld(TextAttributeOld.BoldAttr) { Size = new(1.05f, 0.3f), Alignment = TMPro.TextAlignmentOptions.Center, FontMaterial = VanillaAsset.StandardMaskedFontMaterial }.EditFontSize(2f, 1f, 2f);
 
         /// <summary>
+        /// ターゲットカーソル画像
+        /// </summary>
+        private static Nebula.Utilities.SpriteLoader targetImage = Nebula.Utilities.SpriteLoader.FromResource("Nebula.Resources.SniperGuide.png", 100f);
+
+        /// <summary>
+        /// 現在のミニゲームインスタンス
+        /// </summary>
+        private Minigame? PlayerSelectMinigame = null;
+
+        /// <summary>
         /// プレイヤー選択画面を開く処理
         /// </summary>
         void OpenPlayerSelectScreen()
@@ -109,242 +116,178 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             var alivePlayers = GamePlayer.AllPlayers.Where(p => !p.IsDead && !p.AmOwner).ToList();
             
             // プレイヤー名でソート
-            alivePlayers.Sort((p1, p2) => p1.PlayerName.CompareTo(p2.PlayerName));
+            alivePlayers.Sort((p1, p2) => p1.Name.CompareTo(p2.Name));
 
             if (alivePlayers.Count == 0) return;
 
-            // 画面生成
-            var screen = MetaScreen.GenerateWindow(new Virial.Compat.Vector2(7.6f, 4.2f), HudManager.Instance.transform, new Vector3(0, 0, -50f), true, false);
-
-            MetaWidgetOld widget = new();
-            MetaWidgetOld inner = new();
-
-            // プレイヤーボタン生成 (グリッド配置)
-            inner.Append(alivePlayers, (targetPlayer) => 
+            // ShapeshifterMinigameのプレハブを検索
+            ShapeshifterMinigame prefab = null;
+            var foundObjects = Resources.FindObjectsOfTypeAll(Il2CppType.Of<ShapeshifterMinigame>());
+            foreach (var obj in foundObjects)
             {
-                return new CombinedWidgetOld(
-                    new MetaWidgetOld.HorizonalMargin(0.1f),
-                    new MetaWidgetOld.Button(() =>
-                    {
-                        // 選択処理
-                        SelectedTarget = targetPlayer;
-                        if (PlayerSelectScreen != null)
-                        {
-                            PlayerSelectScreen.CloseScreen();
-                            PlayerSelectScreen = null;
-                        }
-                        OpenRoomSelectScreen();
-                    }, ButtonAttribute)
-                    {
-                        RawText = targetPlayer.PlayerName,
-                        TextHorizonotalExtraMargin = 0.15f,
-                        PostBuilder = (button, renderer, text) =>
-                        {
-                            renderer.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
-                            // ボタンテキストの位置調整
-                            button.transform.localPosition += new Vector3(0.05f, 0f, 0f);
-                            text.transform.localPosition += new Vector3(0.072f, 0f, 0f);
+                var minigamePrefab = obj.TryCast<ShapeshifterMinigame>();
+                if (minigamePrefab != null && minigamePrefab.gameObject.scene.name == null)
+                {
+                    prefab = minigamePrefab;
+                    break;
+                }
+            }
+            if (prefab == null) return;
 
-                            // プレイヤーアバター表示
-                            var display = VanillaAsset.GetPlayerDisplay();
-                            display.transform.SetParent(button.transform);
-                            display.transform.localPosition = new Vector3(-0.65f, -0.2f, -1f);
-                            display.transform.localScale = new Vector3(0.45f, 0.45f, 1f);
-                            
-                            var playerDisplay = display.GetComponent<PlayerDisplay>();
-                            if (playerDisplay != null)
-                            {
-                                // 現在の見た目を反映
-                                var control = Nebula.Utilities.Helpers.GetPlayer(targetPlayer.PlayerId);
-                                if (control != null)
-                                {
-                                    playerDisplay.UpdateFromPlayerOutfit(control, false, false);
-                                    
-                                    // 名前は非表示
-                                    playerDisplay.Cosmetics.ToggleName(false);
-                                }
-                            }
+            // ミニゲーム生成
+            var minigame = Object.Instantiate(prefab).Cast<ShapeshifterMinigame>();
+            minigame.transform.SetParent(Camera.main.transform, false);
+            minigame.transform.localPosition = new Vector3(0f, 0f, -50f);
 
-                            // レイヤー設定（UIマスクで隠れるように）
-                            foreach (var r in display.GetComponentsInChildren<SpriteRenderer>())
-                            {
-                                r.maskInteraction = SpriteMaskInteraction.VisibleInsideMask;
-                                r.sortingLayerID = renderer.sortingLayerID;
-                                r.sortingOrder = renderer.sortingOrder + 1;
-                            }
-                        }
+            // ※ShapeshifterMinigameのBeginは呼ばずに手動で構築する (ターゲット条件が異なるため)
+            // 既存のBegin呼ぶと死体も含まれる可能性があるため
+
+            // パネル配置用リスト
+            Il2CppSystem.Collections.Generic.List<UiElement> controllerButtons = new Il2CppSystem.Collections.Generic.List<UiElement>();
+
+            // パネル生成ループ
+            // ShapeshifterMinigameの定数を参照したいが、インスタンスから値を取る
+            float xStart = minigame.XStart;
+            float yStart = minigame.YStart;
+            float xOffset = minigame.XOffset;
+            float yOffset = minigame.YOffset;
+
+            for (int i = 0; i < alivePlayers.Count; i++)
+            {
+                var targetPlayer = alivePlayers[i];
+                int col = i % 3;
+                int row = i / 3;
+                
+                // パネル生成
+                ShapeshifterPanel panel = Object.Instantiate(minigame.PanelPrefab, minigame.transform).Cast<ShapeshifterPanel>();
+                panel.transform.localPosition = new Vector3(xStart + (float)col * xOffset, yStart + (float)row * yOffset, -1f);
+                
+                // プレイヤー情報セット
+                // SetPlayer(int targetId, NetworkedPlayerInfo info, Action onClick)
+                panel.SetPlayer(targetPlayer.PlayerId, targetPlayer.VanillaPlayer.Data, new Action(() => 
+                {
+                    SetPlayer(targetPlayer.PlayerId);
+                }));
+
+                // 名前の色設定 (インポスターなら赤、それ以外は白)
+                panel.NameText.color = targetPlayer.VanillaPlayer.Data.Role.TeamType == RoleTeamTypes.Impostor ? Palette.ImpostorRed : Palette.White;
+
+                // カーソル表示 (選択中のプレイヤーなら表示)
+                if (SelectedTarget != null && SelectedTarget.PlayerId == targetPlayer.PlayerId)
+                {
+                    var cursor = new GameObject("Cursor");
+                    cursor.transform.SetParent(minigame.transform);
+                    cursor.transform.localPosition = new Vector3(0, 0, -5f);
+                    var cursorSprite = cursor.AddComponent<SpriteRenderer>();
+                    
+                    if (MapBehaviour.Instance && MapBehaviour.Instance.HerePoint) 
+                    {
+                        cursorSprite.sprite = MapBehaviour.Instance.HerePoint.sprite;
+                        cursorSprite.color = Color.cyan;
                     }
-                );
-            }, 4, -1, 0, 0.59f);
+                }
 
-            // スクロールビューに格納
-            MetaWidgetOld.ScrollView scroller = new(new(6.9f, 3.8f), inner, true) 
-            { 
-                Alignment = IMetaWidgetOld.AlignmentOption.Center 
-            };
+                controllerButtons.Add(panel.Button); // Kept panel.Button as it's a UiElement, panel itself might not be.
+            }
+
+            // 閉じるボタンの設定
+            if (minigame.BackButton != null)
+            {
+                var backButton = minigame.BackButton.TryCast<PassiveButton>();
+                if (backButton != null)
+                {
+                    backButton.OnClick.AddListener((UnityEngine.Events.UnityAction)(() => ClosePlayerSelectMinigame()));
+                }
+            }
+
+            // コントローラー/オーバーレイ表示
+            ControllerManager.Instance.OpenOverlayMenu(minigame.name, minigame.BackButton, minigame.DefaultButtonSelected, controllerButtons, false);
             
-            widget.Append(scroller);
-
-            // タイトル
-            widget.Append(new MetaWidgetOld.Text(TextAttributeOld.BoldAttr) 
-            { 
-                MyText = new RawTextComponent(Language.Translate("coordinator.selectPlayer")), 
-                Alignment = IMetaWidgetOld.AlignmentOption.Center 
-            });
-
-            screen.SetWidget(widget);
-            PlayerSelectScreen = screen;
+            PlayerSelectMinigame = minigame;
         }
 
         /// <summary>
-        /// 部屋選択画面を開く処理（アドミンマップ形式）
+        /// プレイヤー選択ミニゲームを閉じる
         /// </summary>
-        void OpenRoomSelectScreen()
+        void ClosePlayerSelectMinigame()
         {
-            if (SelectedTarget == null) return;
-
-            // アドミンマップの部屋座標を取得
-            var mapData = Nebula.Map.MapData.GetCurrentMapData();
-            var adminRooms = mapData.AdminRooms;
-
-            if (adminRooms == null || adminRooms.Length == 0)
+            if (PlayerSelectMinigame != null)
             {
-                // フォールバック: リスト形式
-                OpenRoomSelectScreenAsList();
+                UnityEngine.Debug.Log("Coordinator: Closing PlayerSelectMinigame");
+                ControllerManager.Instance.CloseOverlayMenu(PlayerSelectMinigame.name);
+                Object.Destroy(PlayerSelectMinigame.gameObject);
+                PlayerSelectMinigame = null;
+            }
+        }
+
+        // マップレイヤーのインスタンス
+        private CoordinatorMapLayer? mapLayer = null;
+
+        // プレイヤーが選択された時の処理
+        private void SetPlayer(byte playerId)
+        {
+            // PlayerControlを取得し、GamePlayer (Virial.Game.Player) に変換する必要がある
+            var target = GamePlayer.AllPlayers.FirstOrDefault(p => p.PlayerId == playerId);
+            if (target == null) return;
+
+            SelectedTarget = target;
+            UnityEngine.Debug.Log($"Coordinator: Target set to {SelectedTarget.Name}");
+            
+            // プレイヤー選択画面を閉じる
+            ClosePlayerSelectMinigame();
+
+            // マップを開く (HudManager経由)
+            // OnOpenMapイベントでレイヤー生成をフックする
+            HudManager.Instance.ToggleMapVisible(new MapOptions { Mode = MapOptions.Modes.Normal, AllowMovementWhileMapOpen = true });
+        }
+
+        // マップが開かれた時のイベント (Doppelgangerを参考)
+        [Local]
+        void OnOpenMap(AbstractMapOpenEvent ev)
+        {
+            // ターゲットが選択されていない、または死んでいる場合は何もしない
+            // MyPlayer.Data.IsDead -> MyPlayer.IsDead (GamePlayer wrapper uses IsDead property directly)
+            if (SelectedTarget == null || MyPlayer.IsDead) 
+            {
+                if (mapLayer != null) mapLayer.gameObject.SetActive(false);
                 return;
             }
 
-            // マップ画面を生成
-            var screen = MetaScreen.GenerateWindow(new Virial.Compat.Vector2(7.5f, 4.5f), HudManager.Instance.transform, UnityEngine.Vector3.zero, true, false);
-
-            MetaWidgetOld widget = new();
-
-            // タイトル
-            widget.Append(new MetaWidgetOld.Text(TextAttributeOld.BoldAttr) 
-            { 
-                RawText = Language.Translate("coordinator.selectRoom") + $" - Target: {SelectedTarget!.PlayerName}", 
-                Alignment = IMetaWidgetOld.AlignmentOption.Center 
-            });
-            widget.Append(new MetaWidgetOld.VerticalMargin(0.35f));
-
-            // マップ画像と部屋ボタンを配置
-            var capturedTarget = SelectedTarget;
-            var capturedScreen = screen;
-            var roomButtons = adminRooms.Select(roomInfo =>
+            // 通常マップイベントのみ対応
+            if (ev is MapOpenNormalEvent && !IsUsurped && !MeetingHud.Instance)
             {
-                var roomType = roomInfo.room;
-                string roomName = GetRoomNameFromSystemType(roomType);
+                UnityEngine.Debug.Log("Coordinator: OnOpenMap triggered. Showing Target UI.");
 
-                return ((IMetaParallelPlacableOld button, UnityEngine.Vector2 pos))(
-                    new MetaWidgetOld.WrappedWidget(
-                        NebulaAPI.GUI.Button(GUIAlignment.Center, 
-                            NebulaAPI.GUI.GetAttribute(Virial.Text.AttributeAsset.OverlayContent), 
-                            NebulaAPI.GUI.RawTextComponent(roomName),
-                            (button) =>
-                            {
-                                // 部屋が選択された - 即座に判定実行
-                                ExecuteCoordinate(capturedTarget!, roomName);
-
-                                // 画面を閉じる
-                                capturedScreen?.CloseScreen();
-                                RoomSelectScreen = null;
-                                SelectedTarget = null;
-                            }, 
-                            margin: 0.14f)
-                    ), 
-                    roomInfo.pos
-                );
-            });
-
-            widget.Append(MetaWidgetOld.Image.AsMapImage(AmongUsUtil.CurrentMapId, 5.6f, roomButtons, 0xFFFFFFF));
-
-            screen.SetWidget(widget);
-
-            // 閉じられた時の処理
-            RoomSelectScreen = screen;
-        }
-
-        /// <summary>
-        /// 部屋選択画面をリスト形式で開く（フォールバック用）
-        /// </summary>
-        void OpenRoomSelectScreenAsList()
-        {
-            if (SelectedTarget == null) return;
-
-            // アドミンマップの部屋名リストを取得
-            var mapData = Nebula.Map.MapData.GetCurrentMapData();
-            var adminRooms = mapData.AdminRooms;
-            
-            if (adminRooms == null || adminRooms.Length == 0) return;
-
-            List<GUIWidget> roomWidgets = new();
-
-            foreach (var roomInfo in adminRooms)
-            {
-                var roomType = roomInfo.room;
-                string roomName = GetRoomNameFromSystemType(roomType);
-                var capturedTarget = SelectedTarget;
-                
-                var roomButton = NebulaAPI.GUI.Button(GUIAlignment.Center, 
-                    NebulaAPI.GUI.GetAttribute(Virial.Text.AttributeAsset.OverlayContent), 
-                    NebulaAPI.GUI.RawTextComponent(roomName),
-                    (button) =>
-                    {
-                        ExecuteCoordinate(capturedTarget, roomName);
-                        
-                        if (RoomSelectScreen != null)
-                        {
-                            RoomSelectScreen.CloseScreen();
-                            RoomSelectScreen = null;
-                        }
-                        SelectedTarget = null;
-                    });
-
-                roomWidgets.Add(roomButton);
-            }
-
-            var scrollView = new GUIScrollView(GUIAlignment.Center, new Virial.Compat.Vector2(4.5f, 3f), 
-                () => NebulaAPI.GUI.VerticalHolder(GUIAlignment.Center, roomWidgets.ToArray()));
-
-            var cancelButton = NebulaAPI.GUI.Button(GUIAlignment.Center,
-                NebulaAPI.GUI.GetAttribute(Virial.Text.AttributeAsset.OverlayContent),
-                NebulaAPI.GUI.LocalizedTextComponent("ui.button.cancel"),
-                (button) =>
+                if (mapLayer == null)
                 {
-                    if (RoomSelectScreen != null)
+                    // レイヤー未生成なら作成 (Doppelganger方式)
+                    mapLayer = UnityHelper.CreateObject<CoordinatorMapLayer>("CoordinatorLayer", MapBehaviour.Instance.transform, new Vector3(0f, 0f, -1f), null);
+                    mapLayer.Initialize((room) => 
                     {
-                        RoomSelectScreen.CloseScreen();
-                        RoomSelectScreen = null;
-                    }
-                    SelectedTarget = null;
-                });
+                        ExecuteCoordinate(SelectedTarget, room);
+                    });
+                }
 
-            var mainContent = NebulaAPI.GUI.VerticalHolder(GUIAlignment.Center,
-                NebulaAPI.GUI.LocalizedText(GUIAlignment.Center, NebulaAPI.GUI.GetAttribute(Virial.Text.AttributeAsset.OverlayTitle), "coordinator.selectRoom"),
-                NebulaAPI.GUI.RawText(GUIAlignment.Center, NebulaAPI.GUI.GetAttribute(Virial.Text.AttributeAsset.OverlayContent), $"Target: {SelectedTarget!.PlayerName}"),
-                NebulaAPI.GUI.VerticalMargin(0.1f),
-                scrollView,
-                NebulaAPI.GUI.VerticalMargin(0.1f),
-                cancelButton
-            );
-
-            var screen = MetaScreen.GenerateWindow(new Virial.Compat.Vector2(7.5f, 4.5f), HudManager.Instance.transform, UnityEngine.Vector3.zero, true, true);
-            screen.SetWidget(mainContent, out var _);
-            RoomSelectScreen = screen;
+                // 表示
+                mapLayer.gameObject.SetActive(true);
+            }
+            else
+            {
+                // 条件を満たさない場合は非表示
+                if (mapLayer != null) mapLayer.gameObject.SetActive(false);
+            }
         }
 
         /// <summary>
         /// SystemTypesから部屋名を取得するヘルパー
         /// </summary>
-        /// <param name="roomType">部屋のSystemTypes</param>
-        /// <returns>部屋名</returns>
         string GetRoomNameFromSystemType(SystemTypes roomType)
         {
             PlainShipRoom room;
             if (ShipStatus.Instance.FastRooms.TryGetValue(roomType, out room) && room.roomArea != null)
             {
                 var center = room.roomArea.bounds.center;
-                return NebulaAPI.CurrentGame?.CurrentMap?.GetRoomName(new Virial.Compat.Vector2(center.x, center.y), false, false, false) ?? roomType.ToString();
+                return AmongUsUtil.GetRoomName(new Vector2(center.x, center.y), false, false);
             }
             return roomType.ToString();
         }
@@ -353,22 +296,28 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         /// 座標判定を実行してキルを試みる処理
         /// </summary>
         /// <param name="target">ターゲットプレイヤー</param>
-        /// <param name="guessedRoom">推測した部屋名</param>
-        void ExecuteCoordinate(GamePlayer target, string guessedRoom)
+        /// <param name="targetRoom">推測した部屋タイプ</param>
+        void ExecuteCoordinate(GamePlayer target, SystemTypes targetRoom)
         {
             if (target.IsDead) return;
 
-            // ターゲットの現在位置を取得
-            UnityEngine.Vector2 targetPos = target.TruePosition;
-
-            // ターゲットが実際にいる部屋を取得
-            var actualRoom = NebulaAPI.CurrentGame?.CurrentMap?.GetRoomName(targetPos, false, false, false);
-
-            // 判定：推測した部屋と実際の部屋が一致するか
-            bool isCorrect = actualRoom == guessedRoom;
+            // ターゲットの現在部屋を判定
+            // ShipStatus.Instance.FastRoomsを使用
+            bool isCorrect = false;
+            
+            if (ShipStatus.Instance.FastRooms.TryGetValue(targetRoom, out var room) && room.roomArea != null)
+            {
+                // Collider2D.OverlapPoint で判定
+                if (room.roomArea.OverlapPoint(target.TruePosition))
+                {
+                    isCorrect = true;
+                }
+            }
 
             if (isCorrect)
             {
+                UnityEngine.Debug.Log($"Coordinator: Guess CORRECT! Killing {target.Name} in {targetRoom}");
+
                 // 正解：ターゲットをキル (RemoteKill)
                 MyPlayer.MurderPlayer(target, PlayerState.Dead, EventDetail.Kill, KillParameter.RemoteKill, KillCondition.BothAlive);
 
@@ -380,9 +329,14 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             }
             else
             {
+                UnityEngine.Debug.Log($"Coordinator: Guess WRONG! Target {target.Name} is not in {targetRoom}");
+                
                 // 不正解：ターゲットに通知
                 CoordinatorHelpers.RpcHolder.RpcNotifyTarget.Invoke(target.PlayerId);
             }
+
+            // 画面を閉じる
+            CloseAllScreens();
         }
 
         /// <summary>
@@ -406,19 +360,31 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         /// <summary>
         /// すべての画面を閉じる
         /// </summary>
-        void CloseAllScreens()
+        private void CloseAllScreens()
         {
-            if (PlayerSelectScreen != null)
+            ClosePlayerSelectMinigame();
+
+            // マップを閉じる（HudManager経由）
+            if (MapBehaviour.Instance && MapBehaviour.Instance.IsOpen)
             {
-                PlayerSelectScreen.CloseScreen();
-                PlayerSelectScreen = null;
+                // 引数が必要
+                HudManager.Instance.ToggleMapVisible(new MapOptions { Mode = MapOptions.Modes.Normal });
             }
+
+            // レイヤー非表示
+            if (mapLayer != null)
+            {
+                mapLayer.gameObject.SetActive(false);
+            }
+            
+            // ターゲット選択解除
+            SelectedTarget = null;
+
             if (RoomSelectScreen != null)
             {
                 RoomSelectScreen.CloseScreen();
                 RoomSelectScreen = null;
             }
-            SelectedTarget = null;
         }
     }
 }
