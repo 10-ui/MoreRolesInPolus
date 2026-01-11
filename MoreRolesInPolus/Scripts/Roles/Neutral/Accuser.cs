@@ -36,6 +36,8 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
     {
     }
 
+    Image? DefinedAssignable.IconImage => (Guesser.MyEvilRole as DefinedRole).IconImage;
+    static private readonly Image researchSprite = NebulaAPI.AddonAsset.GetResource(string.Format("Crewmate/Researcher/ResearchButton.png"))!.AsImage(115f)!;
     RuntimeRole RuntimeAssignableGenerator<RuntimeRole>.CreateInstance(GamePlayer player, int[] arguments) => new Instance(player, arguments);
 
     public class Instance : RuntimeAssignableTemplate, RuntimeRole
@@ -86,7 +88,7 @@ internal class Accuser : DefinedRoleTemplate, DefinedRole
                         // 統計：推測回数を記録
                         StatsGuess.Progress();
                         // 推測が正しいかチェック
-                        bool isCorrect = p.Role.ExternalRecognitionRole == r;
+                        bool isCorrect = p.Role.CheckGuessAbility(r);
 
                         if (isCorrect)
                         {

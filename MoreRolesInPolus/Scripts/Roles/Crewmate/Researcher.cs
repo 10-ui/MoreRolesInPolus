@@ -1,10 +1,17 @@
 ﻿using System.Reflection;
+using System.Text;
+using UnityEngine;
+using Virial.Compat;
+using Virial.Events.Game.Meeting;
+using Virial.Events.Player;
+using Virial.Events.Game;
 
 namespace MoreRolesInPolus.Roles.Crewmate;
 
+[NebulaRPCHolder]
 public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, DefinedRole
 {
-    private Researcher() : base("researcher", new(104,251,194), RoleCategory.CrewmateRole, NebulaTeams.CrewmateTeam, [SurveyCooldownOption, SurveyDurationOption, SurveyTimeOption, MaxSurveyOption])
+    private Researcher() : base("researcher", new(104, 251, 194), RoleCategory.CrewmateRole, NebulaTeams.CrewmateTeam, [SurveyCooldownOption, SurveyDurationOption, SurveyTimeOption, MaxSurveyOption])
     {
     }
     Image? DefinedAssignable.IconImage => iconImage;
@@ -32,11 +39,25 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
         private const float interval = 0.5f;
 
         int leftUses;
-        private record SurveyHistory(float Time, GamePlayer Player, string Content);
+        // 履歴レコード: 時間、プレイヤー、内容、そしてモードプレフィックス(H/T)
+        private record SurveyHistory(float Time, GamePlayer Player, string Content, string Prefix);
         private List<SurveyHistory> InthisturnResult = [];
 
-        static private readonly Image researchSprite = NebulaAPI.AddonAsset.GetResource(string.Format("Crewmate/Researcher/ResearchButton.png"))!.AsImage(115f)!;
+        // 監視モード: 会議まで行動を記録する
+        private record LoggerTarget(float StartTime, GamePlayer Player);
+        private List<LoggerTarget> activeLoggers = [];
 
+        // 通常モード用の画像
+        static private readonly Image researchSprite = NebulaAPI.AddonAsset.GetResource(string.Format("Crewmate/Researcher/ResearchButton.png"))!.AsImage(115f)!;
+        // 監視モード用の画像
+        static private readonly Image trackSprite = NebulaAPI.AddonAsset.GetResource("Crewmate/Researcher/TrackButton.png")!.AsImage(115f)!;
+
+        private enum AbilityMode
+        {
+            Instant, // 直前の行動を確認
+            Logger   // 会議開始まで監視
+        }
+        private AbilityMode currentMode = AbilityMode.Instant;
 
         string GetHistory(GamePlayer player, float from, float to)
         {
@@ -44,16 +65,19 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
 
             foreach (var action in allActions)
             {
-                if(action.Player != player)
+                if (action.Player != player)
                 {
                     continue;
-                };
+                }
+                ;
 
-                if(action.Time <= from){
+                if (action.Time <= from)
+                {
                     continue;
                 }
-                 
-                if (action.Time >= to) {
+
+                if (action.Time >= to)
+                {
                     break;
                 }
                 float elapsedTime = MathF.Floor(to - action.Time);
@@ -67,10 +91,14 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
             this.leftUses = leftUses;
             this.leftUses = MaxSurveyOption == 0 ? 1000 : MaxSurveyOption;
 
-            if (AmOwner) 
+            if (AmOwner)
             {
                 //実行対象をきめるやつ
-                var surveyTracker = ObjectTrackers.ForPlayerlike(this, null, MyPlayer, (p) => ObjectTrackers.PlayerlikeStandardPredicate(p));
+                var surveyTracker = ObjectTrackers.ForPlayerlike(this, null, MyPlayer, (p) =>
+                    ObjectTrackers.PlayerlikeStandardPredicate(p) &&
+                    !activeLoggers.Any(l => l.Player.PlayerId == p.RealPlayer.PlayerId) &&
+                    !InthisturnResult.Any(h => h.Player.PlayerId == p.RealPlayer.PlayerId)
+                );
 
                 //発火ボタン
                 var surveyButton = NebulaAPI.Modules.EffectButton(this, MyPlayer, VirtualKeyInput.Ability,
@@ -78,13 +106,48 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
                         _ => surveyTracker.CurrentTarget != null, _ => this.leftUses > 0);
                 if (this.leftUses < 20) surveyButton.ShowUsesIcon(4, this.leftUses.ToString());
 
+                // Shiftキーでモードを切り替える
+                surveyButton.BindSubKey(Virial.Compat.VirtualKeyInput.AidAction, "researcher.switch", true);
+
+                ButtonEffect.SetAidAction(surveyButton, this, this, MyPlayer, () =>
+                {
+                    if (surveyButton.IsInEffect) return;
+
+                    // モード切替
+                    currentMode = currentMode == AbilityMode.Instant ? AbilityMode.Logger : AbilityMode.Instant;
+
+                    // ボタンの見た目を更新
+                    if (currentMode == AbilityMode.Logger)
+                    {
+                        surveyButton.SetImage(trackSprite);
+                        surveyButton.SetLabel("researcher.track");
+                    }
+                    else
+                    {
+                        surveyButton.SetImage(researchSprite);
+                        surveyButton.SetLabel("researcher.survey");
+                    }
+                });
+
+
                 //調査を実行する関数
-                void examinePlayer() 
+                void examinePlayer()
                 {
                     var examineTime = Time.time;
                     var TargetPlayer = surveyTracker.CurrentTarget.RealPlayer;
-                    string historyText = GetHistory(TargetPlayer, examineTime - SurveyTimeOption, examineTime);
-                    InthisturnResult.Add(new(examineTime, TargetPlayer, historyText));
+
+                    if (currentMode == AbilityMode.Instant)
+                    {
+                        // 通常: 直前の行動を取得 (History)
+                        string historyText = GetHistory(TargetPlayer, examineTime - SurveyTimeOption, examineTime);
+                        InthisturnResult.Add(new(examineTime, TargetPlayer, historyText, "H"));
+                    }
+                    else
+                    {
+                        // 監視: ターゲットを登録 (Track)
+                        activeLoggers.Add(new LoggerTarget(examineTime, TargetPlayer));
+                    }
+
                     this.leftUses--;
                     surveyButton.UpdateUsesIcon(this.leftUses.ToString());
                 }
@@ -110,7 +173,7 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
                 };
 
                 surveyButton.EffectTimer = NebulaAPI.Modules.Timer(this, SurveyDurationOption);
-                surveyButton.SetLabel("survey");
+                surveyButton.SetLabel("researcher.survey");
                 surveyButton.SetAsUsurpableButton(this);
             }
 
@@ -135,10 +198,8 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
 
                 UnityEngine.Vector2 pos = gplayer.TruePosition;
 
-                var map = NebulaAPI.CurrentGame.CurrentMap;
-                var getRoomNameMethod = map.GetType().GetMethod("GetRoomName", 
-                    new[] { typeof(UnityEngine.Vector2), typeof(bool), typeof(bool), typeof(bool) });
-                var roomResult = (string?)getRoomNameMethod?.Invoke(map, new object[] { pos, false, false, false });
+                var roomResult = NebulaAPI.CurrentGame.CurrentMap.GetRoomName(pos, false, false, false);
+
 
                 byte id = gplayer.PlayerId;
 
@@ -164,35 +225,56 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
 
         //アクションを起こした
         [Local]
-        void OnDoGameAction(PlayerDoGameActionEvent ev) 
+        void OnDoGameAction(PlayerDoGameActionEvent ev)
         {
-            if(ev.ActionType.IsPlacementAction == true)
+            if (ev.ActionType.IsPlacementAction == true)
             {
                 allActions.Add(new(Time.time, ev.Player, "何かを設置したようだ..."));
-            } else if(ev.ActionType.IsPhysicalAction == true)
+            }
+            else if (ev.ActionType.IsPhysicalAction == true)
             {
                 allActions.Add(new(Time.time, ev.Player, "状態を変化させたようだ..."));
-            } else
+            }
+            else
             {
                 allActions.Add(new(Time.time, ev.Player, "アクションを起こした！"));
             }
         }
 
-        //ミーティングボタンが押されたときに実行する
-        //TODO:対象者になにか行動があるときのみ表示。なにもなければ生成しても行動なしになるようにする
-        //アイコンを書きたい
+        //殺害された
         [Local]
-        void OnMeetingStart(MeetingStartEvent ev) 
+        void OnPlayerMurdered(PlayerKillPlayerEvent ev)
         {
+            allActions.Add(new(Time.time, ev.Dead, "何らかの手段によって殺害された"));
+        }
+
+        //ミーティングボタンが押されたときに実行する
+        //APIが追加されたら、ドアの記録も取得する
+        //検証
+        [Local]
+        void OnMeetingStart(MeetingStartEvent ev)
+        {
+            // 監視中のログを処理する
+            foreach (var logger in activeLoggers)
+            {
+                var now = Time.time;
+                string historyText = GetHistory(logger.Player, logger.StartTime, now);
+                // Timeには監視開始時刻を入れる。プレフィックスは "T" (Track)
+                InthisturnResult.Add(new(logger.StartTime, logger.Player, historyText, "T"));
+            }
+            activeLoggers.Clear();
+
             foreach (var history in InthisturnResult)
             {
                 var now = Time.time;
+                // 経過時間を計算 (監視モードなら開始からの時間)
                 float elapsedTime = MathF.Floor(now - history.Time);
-                var textContent = history.Content == "" ? "特に異常は見られなかったようだ。" : history.Content;
+
+                var textContent = history.Content == "" ? "何もしていないようだ。" : history.Content;
 
                 var playerinfo = NebulaAPI.GUI.VerticalHolder(Virial.Media.GUIAlignment.Left,
                 NebulaAPI.GUI.RawText(Virial.Media.GUIAlignment.Left, NebulaAPI.GUI.GetAttribute(Virial.Text.AttributeAsset.OverlayTitle), textContent));
-                float cachedX = 0f; 
+                float cachedX = 0f;
                 float cachedY = 0f;
 
                 var Holder = NebulaAPI.GUI.VerticalHolder(GUIAlignment.Left,
@@ -207,17 +289,36 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
                 new NoSGameObjectGUIWrapper(GUIAlignment.Left, () => (null!, new(0f, -cachedY))),
                 NebulaAPI.GUI.HorizontalHolder(GUIAlignment.Right,
                     NebulaAPI.GUI.HorizontalMargin(cachedX),
-                    new NoSGUIText(GUIAlignment.Right, AttributeAsset.OverlayTitle, NebulaAPI.GUI.RawTextComponent($"{elapsedTime}秒前"))
-                ),playerinfo
+                    new NoSGUIText(GUIAlignment.Right, AttributeAsset.OverlayTitle, NebulaAPI.GUI.RawTextComponent($"{history.Prefix} {elapsedTime}秒前"))
+                ), playerinfo
                 );
+
                 NebulaAPI.CurrentGame?.GetModule<MeetingOverlayHolder>()?.RegisterOverlay(Holder, MeetingOverlayHolder.IconsSprite[6], (MyRole as DefinedRole).Color);
             }
 
             InthisturnResult.Clear();
             allActions.Clear();
         }
-        // Local 全員の行動を自分の環境にだけ
-        // OnlyMyPlayer 自分の行動をみんなに
-        // OnlyHost Host視点での情報をとりたいとき
+
+        // タスク中にプレイヤーの頭上にステータスを表示する
+        [Local]
+        void ReflectRoleName(PlayerSetFakeRoleNameEvent ev)
+        {
+            if (ev.InMeeting) return;
+
+            // 優先順位: 監視中 > 調査済み
+
+            if (activeLoggers.Any(l => l.Player.PlayerId == ev.Player.PlayerId))
+            {
+                ev.Alternate("調査中");
+                return;
+            }
+
+            if (InthisturnResult.Any(h => h.Player.PlayerId == ev.Player.PlayerId))
+            {
+                ev.Alternate("調査完了");
+                return;
+            }
+        }
     }
 }

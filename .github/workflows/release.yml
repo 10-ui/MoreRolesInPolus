@@ -8,75 +8,133 @@ on:
     paths:
       - 'MoreRolesInPolus/**'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     # PRがマージされた場合のみ実行
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    
-    - name: Extract Version from PR Title
-      id: version
-      shell: bash
-      run: |
-        PR_TITLE="${{ github.event.pull_request.title }}"
-        echo "PR Title: $PR_TITLE"
-        
-        # PRタイトルから v1.0.0 のようなバージョンを抽出
-        if [[ $PR_TITLE =~ (v[0-9]+\.[0-9]+\.[0-9]+) ]]; then
-          VERSION_NUM="${BASH_REMATCH[1]}"
-          VERSION="v,${VERSION_NUM}"
-          FILENAME="${VERSION_NUM}"
-          echo "found=true" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "filename=MoreRolesInPolus-$FILENAME.zip" >> $GITHUB_OUTPUT
-          echo "release_name=MoreRolesInPolus-$FILENAME" >> $GITHUB_OUTPUT
-          echo "Found version: $VERSION"
-        else
-          echo "found=false" >> $GITHUB_OUTPUT
-          echo "No version found in PR title"
-        fi
-    
-    - name: Create Tag
-      if: steps.version.outputs.found == 'true'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "github-actions[bot]@users.noreply.github.com"
-        git tag ${{ steps.version.outputs.version }}
-        git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} ${{ steps.version.outputs.version }}
-    
-    - name: Create ZIP from source
-      if: steps.version.outputs.found == 'true'
-      run: |
-        cd MoreRolesInPolus
-        zip -r ../${{ steps.version.outputs.filename }} .
-    
-    - name: Get PR body
-      if: steps.version.outputs.found == 'true'
-      id: pr_body
-      run: |
-        BODY="${{ github.event.pull_request.body }}"
-        echo "body<<EOF" >> $GITHUB_OUTPUT
-        echo "$BODY" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
-    
-    - name: Create Release
-      if: steps.version.outputs.found == 'true'
-      uses: softprops/action-gh-release@v1
-      with:
-        files: ${{ steps.version.outputs.filename }}
-        tag_name: ${{ steps.version.outputs.version }}
-        name: ${{ steps.version.outputs.release_name }}
-        body: ${{ steps.pr_body.outputs.body }}
-        draft: false
-        prerelease: false
-        make_latest: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract Version from PR Title
+        id: version
+        shell: bash
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          echo "PR Title: $PR_TITLE"
+
+          # PRタイトルから v1.0.0 のようなバージョンを抽出
+          if [[ $PR_TITLE =~ (v[0-9]+\.[0-9]+\.[0-9]+) ]]; then
+            VERSION_NUM="${BASH_REMATCH[1]}"
+            VERSION="v,${VERSION_NUM}"
+            FILENAME="${VERSION_NUM}"
+            # vを除いたバージョン番号（addon.meta用）
+            DISPLAY_VERSION="${VERSION_NUM#v}"
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "display_version=$DISPLAY_VERSION" >> $GITHUB_OUTPUT
+            echo "filename=MoreRolesInPolus-$FILENAME.zip" >> $GITHUB_OUTPUT
+            echo "release_name=MoreRolesInPolus-$FILENAME" >> $GITHUB_OUTPUT
+            echo "Found version: $VERSION"
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+            echo "No version found in PR title"
+          fi
+
+      - name: Create Tag
+        if: steps.version.outputs.found == 'true'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.version.outputs.version }}
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} ${{ steps.version.outputs.version }}
+
+      - name: Update addon.meta with release version
+        if: steps.version.outputs.found == 'true'
+        run: |
+          cd MoreRolesInPolus
+          # jq で Version フィールドを更新（vなしの番号）
+          jq '.Version = "${{ steps.version.outputs.display_version }}"' addon.meta > addon.meta.tmp
+          mv addon.meta.tmp addon.meta
+          echo "Updated addon.meta:"
+          cat addon.meta
+      
+      - name: Create ZIP from source
+        if: steps.version.outputs.found == 'true'
+        run: |
+          cd MoreRolesInPolus
+          zip -r ../${{ steps.version.outputs.filename }} .
+
+      - name: Generate Release Notes
+        if: steps.version.outputs.found == 'true'
+        id: release_notes
+        run: |
+          CURRENT_TAG="${{ steps.version.outputs.version }}"
+          
+          # 前回のリリースタグを取得（今回のタグを除外）
+          PREV_TAG=$(git tag -l "v,v*" --sort=-version:refname | grep -v "^${CURRENT_TAG}$" | head -n 1)
+          
+          echo "Current tag: $CURRENT_TAG"
+          echo "Previous tag: $PREV_TAG"
+          
+          if [ -z "$PREV_TAG" ]; then
+            # 初回リリースの場合
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges HEAD)
+          else
+            # 前回タグから今回までのコミット
+            COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+          
+          # コミットが空の場合のフォールバック
+          if [ -z "$COMMITS" ]; then
+            COMMITS="- 軽微な修正・改善"
+          fi
+          
+          echo "Commits found:"
+          echo "$COMMITS"
+          
+          # リリースノート作成（ヒアドキュメントはインデントなし）
+          cat << 'EOF' > release_notes.md
+          ## 📝 変更内容
+          
+          EOF
+          
+          echo "$COMMITS" >> release_notes.md
+          
+          cat << 'EOF' >> release_notes.md
+          
+          ## 📦 インストール方法
+          
+          1. ZIPファイルをダウンロード
+          2. **解凍せずに**そのままAmong Usの`Addons`フォルダに配置
+          EOF
+          
+          echo "Release notes:"
+          cat release_notes.md
+          
+          echo "notes<<EOFNOTES" >> $GITHUB_OUTPUT
+          cat release_notes.md >> $GITHUB_OUTPUT
+          echo "EOFNOTES" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        if: steps.version.outputs.found == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ steps.version.outputs.filename }}
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.release_name }}
+          body: ${{ steps.release_notes.outputs.notes }}
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
