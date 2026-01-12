@@ -42,6 +42,10 @@ namespace MoreRolesInPolus.Roles.Imposter
         }
         Citation? HasCitation.Citation => Citations.TheOtherRoles;
 
+        Image? DefinedAssignable.IconImage => iconImage;
+        static readonly Image iconImage = NebulaAPI.AddonAsset.GetResource(string.Format("Impostor/Anchor/Anchor.png"))!.AsImage()!;
+
+
         /// <summary>
         /// ロビーで変更できる設定を用意します。ゲーム中で編集できるように、すぐ上のコンストラクタで役職のオプションに追加します。
         /// </summary>
