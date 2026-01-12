@@ -40,6 +40,8 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
     /// 役職の情報を用意します。
     /// </summary>
     static public readonly Coordinator MyRole = new();
+    AbilityAssignmentStatus DefinedRole.AssignmentStatus => AbilityAssignmentStatus.KillersSide;
+    MultipleAssignmentType DefinedRole.MultipleAssignment => MultipleAssignmentType.Allowed;
 
     /// <summary>
     /// 役職を割り当てるとき、プレイヤーに割り当てる能力を作成します。
@@ -121,16 +123,6 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
                 CoordinateButton.SetLabel("coordinate");
             }
         }
-
-        /// <summary>
-        /// ボタンのスタイル定義
-        /// </summary>
-        static TextAttributeOld ButtonAttribute = new TextAttributeOld(TextAttributeOld.BoldAttr) { Size = new(1.05f, 0.3f), Alignment = TMPro.TextAlignmentOptions.Center, FontMaterial = VanillaAsset.StandardMaskedFontMaterial }.EditFontSize(2f, 1f, 2f);
-
-        /// <summary>
-        /// ターゲットカーソル画像
-        /// </summary>
-        private static Nebula.Utilities.SpriteLoader targetImage = Nebula.Utilities.SpriteLoader.FromResource("Nebula.Resources.SniperGuide.png", 100f);
 
         /// <summary>
         /// 現在のミニゲームインスタンス
@@ -340,7 +332,18 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         /// <param name="clickedWorldPos">クリックしたワールド座標</param>
         void ExecuteCoordinate(GamePlayer target, SystemTypes targetRoom, Vector2 clickedWorldPos)
         {
-            if (target.IsDead) return;
+            if (target.IsDead)
+            {
+                var titleShower = NebulaAPI.CurrentGame!.GetModule<TitleShower>();
+                var infoColor = new Color(0.1f, 0.2f, 0.8f);
+                if (titleShower != null)
+                {
+                    titleShower.SetText($"{target.PlayerName} は既に死んでいるようだ...", infoColor, 3f, true);
+                }
+                AmongUsUtil.PlayCustomFlash(infoColor, 0f, 0.5f, 0.4f, 0f);
+                CloseAllScreens();
+                return;
+            }
 
             // 距離計算
             Vector2 targetPos = target.TruePosition;
