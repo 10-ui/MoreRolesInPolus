@@ -1,11 +1,4 @@
-﻿using System.Reflection;
-using System.Text;
-using UnityEngine;
-using Virial.Compat;
-using Virial.Events.Game.Meeting;
-using Virial.Events.Player;
-using Virial.Events.Game;
-
+﻿
 namespace MoreRolesInPolus.Roles.Crewmate;
 
 [NebulaRPCHolder]
@@ -199,7 +192,6 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
                 UnityEngine.Vector2 pos = gplayer.TruePosition;
 
                 var roomResult = NebulaAPI.CurrentGame.CurrentMap.GetRoomName(pos, false, false, false);
-
 
                 byte id = gplayer.PlayerId;
 
