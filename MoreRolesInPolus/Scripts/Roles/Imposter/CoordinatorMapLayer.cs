@@ -4,13 +4,12 @@
  * 概要: Coordinator役職用のマップレイヤー。マップ上をクリックして部屋を選択する。
  * 仕様:
  *   - MonoBehaviour を継承
- *   - マウス追従ドット（マップ内外で緑/赤表示）を提供
+ *   - マウス追従ドット（常に緑表示）を提供
  *   - クリック位置からSystemTypesを判定し、コールバックを呼び出す
  *   - Doppelgangerスタイルのビジュアル（ターゲットマーカー）を表示
  * 制限:
  *   - 部屋のCollider判定に依存するため、Colliderがない廊下等はSystemTypes.Hallwaysに判定される
  */
-using System;
 using UnityEngine;
 using Nebula.Utilities;
 using Nebula.Map;
@@ -25,6 +24,14 @@ using Color = UnityEngine.Color;
 namespace MoreRolesInPolus.Roles.Imposter
 {
     /// <summary>
+    /// Coordinatorコールバック用インターフェース (IL2CPP互換)
+    /// </summary>
+    public interface ICoordinatorMapCallback
+    {
+        void OnRoomSelected(SystemTypes room, Vector2 clickedWorldPos);
+    }
+
+    /// <summary>
     /// Coordinator用マップレイヤークラス
     /// FakePlayerMapLayerの実装を参考に、独自に実装
     /// </summary>
@@ -37,9 +44,9 @@ namespace MoreRolesInPolus.Roles.Imposter
         }
 
         /// <summary>
-        /// 部屋選択時のコールバック
+        /// コールバック用参照
         /// </summary>
-        private Action<SystemTypes> onRoomSelected;
+        private ICoordinatorMapCallback callbackHandler;
 
         /// <summary>
         /// マウス追従ドット用スプライトレンダラー
@@ -72,13 +79,13 @@ namespace MoreRolesInPolus.Roles.Imposter
         private float mapScale;
 
         /// <summary>
-        /// 初期化処理
+        /// 初期化処理 (IL2CPP互換: インターフェース参照を使用)
         /// </summary>
-        /// <param name="onSelect">部屋選択時に呼び出すコールバック</param>
-        public void Initialize(Action<SystemTypes> onSelect)
+        /// <param name="handler">部屋選択時のコールバックハンドラ</param>
+        public void InjectCallback(ICoordinatorMapCallback handler)
         {
-            UnityEngine.Debug.Log("CoordinatorMapLayer: Initialize called");
-            this.onRoomSelected = onSelect;
+            UnityEngine.Debug.Log("CoordinatorMapLayer: InjectCallback called");
+            this.callbackHandler = handler;
         }
 
         /// <summary>
@@ -86,6 +93,8 @@ namespace MoreRolesInPolus.Roles.Imposter
         /// </summary>
         private void Awake()
         {
+            UnityEngine.Debug.Log("CoordinatorMapLayer: Awake called");
+            
             // マップ情報を取得
             mapCenter = VanillaAsset.GetMapCenter(AmongUsUtil.CurrentMapId);
             mapScale = VanillaAsset.GetMapScale(AmongUsUtil.CurrentMapId);
@@ -114,6 +123,8 @@ namespace MoreRolesInPolus.Roles.Imposter
             targetMarker.color = new Color(1f, 0f, 0f, 0.8f); // 赤色ターゲット
             targetMarker.transform.localScale = Vector3.one * 1.2f;
             targetMarker.enabled = false;
+            
+            UnityEngine.Debug.Log("CoordinatorMapLayer: Awake completed successfully");
         }
 
         /// <summary>
@@ -132,13 +143,12 @@ namespace MoreRolesInPolus.Roles.Imposter
             worldPosOnMinimap.z = -25f;
             dotRenderer.transform.localPosition = worldPosOnMinimap;
 
-            // マップ内外判定で色を変える
-            bool onMap = MapData.GetCurrentMapData().CheckMapArea(worldPos, 0.2f);
-            dotRenderer.color = onMap ? Color.green : Color.red;
+            // ドットは常に緑表示（壁判定のみなので制限なし）
+            dotRenderer.color = Color.green;
         }
 
         /// <summary>
-        /// クリック時の処理
+        /// クリック時の処理（FakePlayerMapLayerと同じ方式）
         /// </summary>
         private void TryClickHere()
         {
@@ -147,8 +157,12 @@ namespace MoreRolesInPolus.Roles.Imposter
             worldPosOnMinimap.z = -5f;
             Vector2 worldPos = VanillaAsset.ConvertFromMinimapPosToWorld(worldPosOnMinimap, AmongUsUtil.CurrentMapId);
 
-            // マップ内のみ処理
-            if (!MapData.GetCurrentMapData().CheckMapArea(worldPos, 0.2f)) return;
+            // マップ領域外のクリックは無視（FakePlayerMapLayerと同じ判定）
+            if (!Nebula.Map.MapData.GetCurrentMapData().CheckMapArea(worldPos, 0.2f))
+            {
+                UnityEngine.Debug.Log("CoordinatorMapLayer: Click ignored (outside map area)");
+                return;
+            }
 
             UnityEngine.Debug.Log($"CoordinatorMapLayer: OnClick at world({worldPos.x}, {worldPos.y})");
 
@@ -164,8 +178,8 @@ namespace MoreRolesInPolus.Roles.Imposter
             // クリック演出（白く光らせる）
             NebulaManager.Instance.StartCoroutine(CoClickEffect().WrapToIl2Cpp());
 
-            // コールバック呼び出し
-            onRoomSelected?.Invoke(selectedRoom);
+            // コールバック呼び出し (インターフェース経由、クリック位置も渡す)
+            callbackHandler?.OnRoomSelected(selectedRoom, worldPos);
         }
 
         /// <summary>
