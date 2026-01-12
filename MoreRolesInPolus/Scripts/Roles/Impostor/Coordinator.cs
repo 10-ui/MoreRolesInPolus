@@ -25,6 +25,10 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         ConfigurationHolder?.AddTags(ConfigurationTags.TagFunny);
     }
 
+    Image? DefinedAssignable.IconImage => iconImage;
+    static readonly Image iconImage = NebulaAPI.AddonAsset.GetResource(string.Format("Impostor/Coordinator/Coordinator.png"))!.AsImage()!;
+
+
     /// <summary>
     /// ロビーで変更できる設定を用意します。ゲーム中で編集できるように、すぐ上のコンストラクタで役職のオプションに追加します。
     /// </summary>
@@ -76,6 +80,9 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         /// </summary>
         private ModAbilityButton? CoordinateButton = null;
 
+        static private readonly Image CoordinateSprite = NebulaAPI.AddonAsset.GetResource("Impostor/Coordinator/CoordinateButton.png")!.AsImage(115f)!;
+
+
         /// <summary>
         /// 役職能力のコンストラクタ。
         /// </summary>
@@ -87,7 +94,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             {
                 // Coordinateボタンを作成
                 CoordinateButton = NebulaAPI.Modules.AbilityButton(this, MyPlayer, Virial.Compat.VirtualKeyInput.Ability,
-                    CoordinateCoolDownOption, "coordinate", null, 
+                    CoordinateCoolDownOption, "coordinate", CoordinateSprite, 
                     null, _ => true)
                     .SetAsUsurpableButton(this);
 
