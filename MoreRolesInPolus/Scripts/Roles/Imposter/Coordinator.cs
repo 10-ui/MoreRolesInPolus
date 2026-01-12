@@ -41,7 +41,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
     /// </summary>
     static public readonly Coordinator MyRole = new();
     AbilityAssignmentStatus DefinedRole.AssignmentStatus => AbilityAssignmentStatus.KillersSide;
-    MultipleAssignmentType DefinedRole.MultipleAssignment => MultipleAssignmentType.Allowed;
+    MultipleAssignmentType DefinedRole.MultipleAssignment => MultipleAssignmentType.AsUniqueMapAbility;
 
     /// <summary>
     /// 役職を割り当てるとき、プレイヤーに割り当てる能力を作成します。
