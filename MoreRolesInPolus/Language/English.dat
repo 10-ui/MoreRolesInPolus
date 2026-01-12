@@ -1,0 +1,79 @@
+### Toa Made
+
+#Role 
+## Anchor - Impostor
+"role.anchor.name" : "Anchor"
+"role.anchor.short" : "Anc"
+"role.anchor.blurb" : "Navigate the sea of chaos"
+"options.role.anchor.placeCoolDown" : "Jack-in-the-Box Place Cooldown"
+"options.role.anchor.cameraCoolDown" : "Jack-in-the-Box Camera Cooldown"
+"options.role.anchor.cameraDuration" : "Jack-in-the-Box Camera Duration"
+"options.role.anchor.numOfJacks" : "Number of Jack-in-the-Boxes"
+"options.role.anchor.detail" : "You can place and use special vents (Jack-in-the-Boxes).<br>Since they also function as cameras, place them carefully."
+"button.label.place" : "Place"
+"button.label.camera" : "Periscope"
+"button.label.left" : "Left"
+"button.label.right" : "Right"
+"ui.action.jack.place" : "You can place a Jack-in-the-Box."
+
+## Researcher - Crewmate
+"role.researcher.name" : "Researcher"
+"role.researcher.blurb" : "Uncover the truth"
+"role.researcher.short" : "Res"
+"options.role.researcher.surveyCooldown" : "Survey Cooldown"
+"options.role.researcher.surveyDuration" : "Survey Duration"
+"options.role.researcher.surveytime" : "Time to Retrospect"
+"options.role.researcher.maxsurvey" : "Max Surveys"
+"options.role.researcher.detail" : "The Researcher can investigate the past actions of other players.<br>Is the truth found in the logs hope, or despair?"
+"button.label.researcher.survey" : "Survey"
+"button.label.researcher.track" : "Track"
+"ui.action.researcher.switch" : "Switch Mode"
+
+### junjun Made
+
+#スポイラー spoiler impostor modifier
+"role.spoiler.name" : "Spoiler"
+"role.spoiler.short" : "Spl"
+"role.spoiler.blurb" : "Spoiler Alert"
+"options.role.spoiler.detail" : "The Spoiler can see the role of the person they kill and how many of that role remain.<br>Note that the number revealed is the count at that moment and does not update."
+"role.spoiler.overlay" : "Remaining: %COUNT%"
+"options.role.spoiler.CanSeeRemainingRoles" : "See remaining count of killed role"
+
+#アキューサー neutral
+"teams.accuser" : "Accuser"
+"role.accuser.name" : "Accuser"
+"role.accuser.short" : "Acc"
+"role.accuser.blurb" : "See through everything"
+"options.role.accuser.detail" : "Win by correctly guessing other players' roles a certain number of times."
+"options.role.accuser.NumOfGuessToWinOption" : "Correct Guesses Needed to Win"
+"options.role.accuser.numOfGuessPerMeeting" : "Guesses Per Meeting"
+"end.accuser" : "Accuser %EXTRA% Wins"
+
+#ばーくろー modifier for crewmate
+"role.barclaw.name" : "Barclaw"
+"role.barclaw.short" : "Bar"
+"role.barclaw.generalBlurb" : "Silence breaks when death piles up"
+"options.role.barclaw.detail" : "Barclaw is a Crewmate modifier that automatically calls an emergency meeting when a certain number of players die."
+"options.role.barclaw.numOfDeadRequired" : "Dead bodies required for meeting"
+"options.role.barclaw.numOfMaxButton" : "Max auto-meetings"
+"options.role.barclaw.enableAfterSecondTurn" : "Enable after second turn"
+"options.role.barclaw.showMeetingInFlash" : "Flash before meeting (when body count reached)"
+"options.role.barclaw.meetingDelayOption" : "Delay before meeting starts"
+"options.role.barclaw.meetingDelayDispersionOption" : "Variance in meeting delay"
+"options.role.barclaw.allowGhostMeeting" : "Allow reporting even if dead"
+
+# Settings
+"settings.mrip.category.stable" : "Stable"
+"settings.mrip.category.snapshot" : "Snapshot"
+"settings.mrip.category.unknown" : "Unknown"
+"settings.mrip.downloading" : "Downloading update..."
+"settings.mrip.update.message" : "Update download complete.\n\nRestart the game to apply\nthe new version (%VERSION%)."
+"settings.mrip.update.title" : "Download Complete"
+"settings.mrip.update.failed" : "Download Failed"
+"settings.mrip.dialog.title" : "MRIP Settings"
+"settings.mrip.dialog.ok" : "OK"
+"settings.mrip.button.name" : "MRIP Settings"
+"settings.mrip.loading" : "Loading version info..."
+"settings.mrip.status.current" : "In Use"
+"settings.mrip.button.get" : "Get"
+"settings.mrip.button.more" : "Load More"

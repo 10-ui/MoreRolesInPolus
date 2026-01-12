@@ -61,16 +61,17 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
                 }
 
                 numOfKillCount++;
-                deadPlayer.Add(ev.Dead);
+                deadPlayer.Add(ev.Dead); 
 
-                if (numOfKillCount >= numOfDeadRequired && !myDead && numOfButtonCount >= numOfMaxButton)
+                if (numOfKillCount >= numOfDeadRequired && !myDead && numOfMaxButton >= numOfButtonCount)
                 {
-                    if(enableAfterSecondTurn && 2 <= nowTurn) return;
-
+                    if(enableAfterSecondTurn && nowTurn < 2) return;
+   
                     if(showMeetingInFlash) AmongUsUtil.PlayQuickFlash(MyRole.UnityColor);
 
                     float t = Mathn.Max(0.1f, meetingDelayOption) + meetingDelayDispersionOption * (float)System.Random.Shared.NextDouble();
                     
+
 
                     if(nowMeeting) return;
                     NebulaManager.Instance.StartCoroutine(WaitAndCallCoroutine(t).WrapToIl2Cpp());

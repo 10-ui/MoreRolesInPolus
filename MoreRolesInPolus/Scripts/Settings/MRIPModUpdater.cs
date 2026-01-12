@@ -108,9 +108,9 @@ public static class MRIPModUpdater
     };
     
     public static readonly string[] CategoryNames = {
-        "安定版",
-        "スナップショット",
-        "不明"
+        "settings.mrip.category.stable",
+        "settings.mrip.category.snapshot",
+        "settings.mrip.category.unknown"
     };
     
     /// <summary>
@@ -206,7 +206,7 @@ public static class MRIPModUpdater
                     new GUILoadingIcon(GUIAlignment.Center) { Size = 0.35f },
                     NebulaGUIWidgetEngine.API.VerticalMargin(0.1f),
                     new NoSGUIText(GUIAlignment.Center, NebulaGUIWidgetEngine.API.GetAttribute(AttributeAsset.OverlayContent), 
-                        new RawTextComponent("更新をダウンロード中..."))
+                        new RawTextComponent(Language.Translate("settings.mrip.downloading").Replace("*", "")))
                 }),
                 new UnityEngine.Vector2(0.5f, 0.5f),
                 out size
@@ -225,12 +225,12 @@ public static class MRIPModUpdater
             
             if (success)
             {
-                string message = $"更新のダウンロードが完了しました。\n\nゲームを再起動すると、\n新しいバージョン({DisplayVersion})が適用されます。";
-                ShowMessage("ダウンロード完了", message);
+                string message = Language.Translate("settings.mrip.update.message").Replace("*", "").Replace("%VERSION%", DisplayVersion);
+                ShowMessage(Language.Translate("settings.mrip.update.title").Replace("*", ""), message);
             }
             else
             {
-                ShowMessage("ダウンロード失敗", errorMessage);
+                ShowMessage(Language.Translate("settings.mrip.update.failed").Replace("*", ""), errorMessage);
             }
         }
         
@@ -375,7 +375,7 @@ public static class MRIPModUpdater
                 NebulaGUIWidgetEngine.API.VerticalHolder(GUIAlignment.Center, new GUIWidget[]
                 {
                     new NoSGUIText(GUIAlignment.Center, NebulaGUIWidgetEngine.API.GetAttribute(AttributeAsset.OverlayTitle), 
-                        new RawTextComponent(title)),
+                        new RawTextComponent(Language.Translate("settings.mrip.dialog.title").Replace("*", ""))),
                     
                     NebulaGUIWidgetEngine.API.VerticalMargin(0.15f),
                     
@@ -385,7 +385,7 @@ public static class MRIPModUpdater
                     NebulaGUIWidgetEngine.API.VerticalMargin(0.2f),
                     
                     NebulaGUIWidgetEngine.API.Button(GUIAlignment.Center, NebulaGUIWidgetEngine.API.GetAttribute(AttributeAsset.CenteredBoldFixed), 
-                        new RawTextComponent("OK"), 
+                        new RawTextComponent(Language.Translate("settings.mrip.dialog.ok").Replace("*", "")), 
                         (GUIClickable _) => { window.CloseScreen(); }, 
                         null, null, null, null, null, null)
                 }),
