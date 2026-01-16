@@ -63,7 +63,7 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
                 numOfKillCount++;
                 deadPlayer.Add(ev.Dead); 
 
-                if (numOfKillCount >= numOfDeadRequired && !myDead && numOfMaxButton >= numOfButtonCount)
+                if (numOfKillCount == numOfDeadRequired && !myDead && numOfMaxButton >= numOfButtonCount)
                 {
                     if(enableAfterSecondTurn && nowTurn < 2) return;
    
@@ -90,7 +90,7 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
             if (nowMeeting) yield break;
             if (myDead && !AllowGhostMeeting) yield break;
 
-            CallMeetingHelper.CallMeeting(MyPlayer);
+            CallMeetingHelper.CallMeeting(MyPlayer, nowMeeting);
         }
 
 
