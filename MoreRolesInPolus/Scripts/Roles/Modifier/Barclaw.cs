@@ -52,7 +52,7 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
         [Local]
         void OnKillPlayer(PlayerKillPlayerEvent ev)
         {
-
+            if (!MyPlayer.IsAlive) return;
             if (AmOwner && !nowMeeting)
             {
                 if (MyPlayer == ev.Dead)
@@ -92,6 +92,7 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
 
             CallMeetingHelper.CallMeeting(MyPlayer, nowMeeting);
         }
+
 
 
         [Local]
