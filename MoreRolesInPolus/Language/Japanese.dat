@@ -1,7 +1,7 @@
-### Toa Made
+## Toa Made
 
-#Role 
 ## Anchor - Impostor
+
 "role.anchor.name" : "潜望者"
 "role.anchor.short" : "潜"
 "role.anchor.blurb" : "混乱の海を航海せよ"
@@ -37,13 +37,12 @@
 "button.label.researcher.track" : "追跡"
 "ui.action.researcher.switch" : "モード切替"
 
-"achievement.researcher.challenge.title" : "深淵に飲み込まれし者"
-"achievement.researcher.challenge.goal" : "1ターンで調査を3回行い、次の会議で対象者が一人も吊られない。"
-"achievement.researcher.challenge.cond" : "会議のたびに把握人数はリセットされる"
-"achievement.researcher.challenge.flavor" : ""ただ、どこで死んだのかは本当に分からないんです。" ―破られた議事録より"
-"achievement.researcher.challenge.splitted.1" : "探偵"
-"achievement.researcher.challenge.splitted.2" : "探偵"
-"achievement.researcher.challenge.splitted.3" : "探偵"
+"achievement.researcher.challenge.title" : "深淵に飲み込まれし者の行方は、、、"
+"achievement.researcher.challenge.goal" : "1ターンで調査もしくは追跡を3回行い、次の会議で自分が死ぬ。"
+"achievement.researcher.challenge.cond" : "・能力使用可能最大回数が5回以上のときのみ<br>・対象者が投票によって吊られた場合のみ"
+"achievement.researcher.challenge.flavor" : ""私は怪物にならぬよう、怪物を研究していた。だが、その研究手法がすでに怪物のそれだった、というわけだ。" ―調査報告書のはしがきより"
+"achievement.researcher.challenge.splitted.1" : "深淵に"
+"achievement.researcher.challenge.splitted.3" : "行方は、、、"
 
 ## Coordinator - Impostor
 "role.coordinator.name" : "コーディネーター"
