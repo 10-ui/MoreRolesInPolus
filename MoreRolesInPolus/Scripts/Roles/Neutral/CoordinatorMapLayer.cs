@@ -21,10 +21,11 @@ using Vector2 = UnityEngine.Vector2;
 using Vector3 = UnityEngine.Vector3;
 using Color = UnityEngine.Color;
 
-namespace MoreRolesInPolus.Roles.Imposter
+namespace MoreRolesInPolus.Roles.Neutral
 {
     /// <summary>
     /// Coordinatorコールバック用インターフェース (IL2CPP互換)
+    /// Coordinator.Instance クラスで実装される
     /// </summary>
     public interface ICoordinatorMapCallback
     {
@@ -120,7 +121,7 @@ namespace MoreRolesInPolus.Roles.Imposter
             // ターゲットマーカー（クリック時に表示）を作成
             targetMarker = UnityHelper.CreateObject<SpriteRenderer>("TargetMarker", transform, new Vector3(0f, 0f, -22f), null);
             targetMarker.sprite = MapBehaviour.Instance.HerePoint.sprite;
-            targetMarker.color = new Color(1f, 0f, 0f, 0.8f); // 赤色ターゲット
+            targetMarker.color = new Color(229f / 255f, 151f / 255f, 150f / 255f, 0.8f); // Coordinator色
             targetMarker.transform.localScale = Vector3.one * 1.2f;
             targetMarker.enabled = false;
             
@@ -143,8 +144,9 @@ namespace MoreRolesInPolus.Roles.Imposter
             worldPosOnMinimap.z = -25f;
             dotRenderer.transform.localPosition = worldPosOnMinimap;
 
-            // ドットは常に緑表示（壁判定のみなので制限なし）
-            dotRenderer.color = Color.green;
+            // マップ領域内なら緑、領域外なら赤
+            bool isValidArea = Nebula.Map.MapData.GetCurrentMapData().CheckMapArea(worldPos, 0.2f);
+            dotRenderer.color = isValidArea ? Color.green : Color.red;
         }
 
         /// <summary>
@@ -195,7 +197,7 @@ namespace MoreRolesInPolus.Roles.Imposter
             yield return new WaitForSeconds(0.15f);
 
             // 元に戻す
-            targetMarker.color = new Color(1f, 0f, 0f, 0.8f);
+            targetMarker.color = new Color(229f / 255f, 151f / 255f, 150f / 255f, 0.8f);
             targetMarker.transform.localScale = Vector3.one * 1.2f;
         }
 

@@ -1,74 +1,142 @@
-﻿
-namespace MoreRolesInPolus.Roles.Imposter;
-
+/**
+ * Coordinator.cs
+ * 
+ * 概要: Coordinator役職（第三陣営版）の情報を定義するクラスです。
+ * 仕様:
+ *   - プレイヤーを選択し、部屋を推測してスコアを獲得する能力を持つ
+ *   - 累積スコアが設定値に達すると単独勝利
+ *   - キル能力は持たない
+ *   - ベント使用可能、インポスター視界、停電無効
+ * 制限:
+ *   - 推測が外れた場合はターゲットに通知される
+ */
 using Nebula.Modules;
 using Nebula.Utilities;
-using UnityEngine;
 using System.Linq;
 using MoreRolesInPolus.Helpers;
 using Nebula.Player;
 using Virial.Game;
 using Il2CppInterop.Runtime;
 using Virial.Events.Game.Minimap;
+using Virial.Runtime;
+using Virial.Events.Player;
+
+// 型の曖昧さを解消
+using Vector2 = UnityEngine.Vector2;
+using Vector3 = UnityEngine.Vector3;
+using Color = UnityEngine.Color;
+using Object = UnityEngine.Object;
+
+namespace MoreRolesInPolus.Roles.Neutral;
+
+/// <summary>
+/// Coordinatorのチーム情報を定義するクラス（Accuserパターンに準拠）
+/// </summary>
+[NebulaPreprocess(PreprocessPhase.BuildAssignmentTypes)]
+internal class CoordinatorTeamInfo
+{
+    static public RoleTeam? MyTeam { get; private set; }
+    static public GameEnd? End { get; private set; }
+    static public Virial.Color TeamColor { get; private set; }
+    
+    static private void Preprocess(NebulaPreprocessor preprocessor)
+    {
+        TeamColor = new(229, 151, 150);
+        MyTeam = preprocessor.CreateTeam("teams.coordinator", TeamColor, TeamRevealType.OnlyMe);
+        End = preprocessor.CreateEnd("coordinator", TeamColor);
+    }
+}
 
 /// <summary>
 /// Coordinatorロールの情報を定義するクラスです。
-/// プレイヤーを選択し、部屋を推測して当たればキルできる能力を持ちます。
+/// プレイヤーを選択し、部屋を推測してスコアを獲得する能力を持ちます。
+/// 累積スコアが設定値に達すると単独勝利します。
 /// </summary>
-public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>, DefinedRole
+internal class Coordinator : DefinedRoleTemplate, DefinedRole
 {
     /// <summary>
-    /// Coordinatorロール情報のコンストラクタです。ここで役職の内部名、色、割り当てのカテゴリ、所属陣営、およびオプションを設定します。
+    /// 座標特定クールダウン（最小値）5000pt時に適用
     /// </summary>
-    private Coordinator() : base("coordinator", new(Palette.ImpostorRed), RoleCategory.ImpostorRole, NebulaTeams.ImpostorTeam, [CoordinateCoolDownOption, KillCooldownMinOption, KillCooldownMaxOption])
+    static private readonly FloatConfiguration CooldownMinOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.cooldownMin", (2.5f, 30f, 2.5f), 10f, FloatConfigurationDecorator.Second);
+    
+    /// <summary>
+    /// 座標特定クールダウン（最大値）0pt時に適用
+    /// </summary>
+    static private readonly FloatConfiguration CooldownMaxOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.cooldownMax", (10f, 60f, 5f), 40f, FloatConfigurationDecorator.Second);
+    
+    /// <summary>
+    /// 初期クールダウンを上書きするか
+    /// </summary>
+    static private readonly BoolConfiguration OverrideInitialCooldownOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.overrideInitialCooldown", false);
+    
+    /// <summary>
+    /// 初期クールダウン（上書き有効時）
+    /// </summary>
+    static private readonly FloatConfiguration InitialCooldownOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.initialCooldown", (5f, 60f, 2.5f), 15f, FloatConfigurationDecorator.Second, () => OverrideInitialCooldownOption);
+    
+    /// <summary>
+    /// 勝利に必要なポイント倍率（5000ベース）
+    /// x1=5000, x2=10000, x4=20000, x6=30000
+    /// </summary>
+    static private readonly IntegerConfiguration PointsMultiplierOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.pointsMultiplier", (1, 8), 4);
+
+    /// <summary>
+    /// 勝利に必要なポイント数を計算
+    /// </summary>
+    public static int PointsToWin => PointsMultiplierOption * 5000;
+
+    /// <summary>
+    /// 役職の情報を用意します。
+    /// </summary>
+    static public Coordinator MyRole = new();
+
+    /// <summary>
+    /// 統計：座標特定回数
+    /// </summary>
+    static private GameStatsEntry StatsCoordinate = NebulaAPI.CreateStatsEntry("stats.coordinator.coordinate", GameStatsCategory.Roles, MyRole);
+
+    /// <summary>
+    /// Coordinatorロール情報のコンストラクタです。
+    /// </summary>
+    private Coordinator() : base("coordinator", CoordinatorTeamInfo.TeamColor, RoleCategory.NeutralRole, CoordinatorTeamInfo.MyTeam, [CooldownMinOption, CooldownMaxOption, OverrideInitialCooldownOption, InitialCooldownOption, PointsMultiplierOption])
     {
         ConfigurationHolder?.AddTags(ConfigurationTags.TagFunny);
     }
 
     Image? DefinedAssignable.IconImage => iconImage;
-    static readonly Image iconImage = NebulaAPI.AddonAsset.GetResource(string.Format("Impostor/Coordinator/Coordinator.png"))!.AsImage()!;
-
-
-    /// <summary>
-    /// ロビーで変更できる設定を用意します。ゲーム中で編集できるように、すぐ上のコンストラクタで役職のオプションに追加します。
-    /// </summary>
-    static private readonly FloatConfiguration CoordinateCoolDownOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.coordinateCoolDown", (0f, 60f, 2.5f), 25f, FloatConfigurationDecorator.Second);
-    
-    /// キルクールダウン（最小値）
-    static private readonly FloatConfiguration KillCooldownMinOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.killCooldownMin", (0f, 30f, 2.5f), 2.5f, FloatConfigurationDecorator.Second);
-    
-    /// キルクールダウン（最大値）
-    static private readonly FloatConfiguration KillCooldownMaxOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.killCooldownMax", (30f, 120f, 5f), 60f, FloatConfigurationDecorator.Second);
+    static readonly Image iconImage = NebulaAPI.AddonAsset.GetResource("Neutral/Coordinator/Coordinator.png")!.AsImage()!;
 
     /// <summary>
-    /// 役職の情報を用意します。
+    /// ランタイムロールを生成
     /// </summary>
-    static public readonly Coordinator MyRole = new();
-    AbilityAssignmentStatus DefinedRole.AssignmentStatus => AbilityAssignmentStatus.KillersSide;
-    MultipleAssignmentType DefinedRole.MultipleAssignment => MultipleAssignmentType.AsUniqueMapAbility;
-
-    /// <summary>
-    /// 役職を割り当てるとき、プレイヤーに割り当てる能力を作成します。
-    /// </summary>
-    /// <param name="player">割り当てる対象のプレイヤー</param>
-    /// <param name="arguments">役職の引数(役職の状態を引き継ぐために使用します。)</param>
-    /// <returns></returns>
-    public override Ability CreateAbility(GamePlayer player, int[] arguments) => new(player, arguments.GetAsBool(0));
+    RuntimeRole RuntimeAssignableGenerator<RuntimeRole>.CreateInstance(GamePlayer player, int[] arguments) => new Instance(player, arguments);
 
     /// <summary>
     /// 役職の能力を記述するクラスです。
     /// </summary>
-    public class Ability : AbstractPlayerUsurpableAbility, IPlayerAbility, ICoordinatorMapCallback
+    public class Instance : RuntimeAssignableTemplate, RuntimeRole, ICoordinatorMapCallback
     {
+        DefinedRole RuntimeRole.Role => MyRole;
+
         /// <summary>
-        /// 通常キルボタンを非表示（座標特定でのみキル可能）
+        /// ベント使用可能
         /// </summary>
-        bool IPlayerAbility.HideKillButton => true;
+        bool RuntimeRole.CanUseVent => true;
+
+        /// <summary>
+        /// インポスター視界
+        /// </summary>
+        bool RuntimeRole.HasImpostorVision => true;
+
+        /// <summary>
+        /// 停電無効
+        /// </summary>
+        bool RuntimeRole.IgnoreBlackout => true;
         
         /// <summary>
         /// 選択されたターゲットプレイヤー
         /// </summary>
-        private GamePlayer SelectedTarget = null;
+        private GamePlayer? SelectedTarget = null;
 
         /// <summary>
         /// 部屋選択画面のMetaScreen参照
@@ -80,38 +148,65 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         /// </summary>
         private ModAbilityButton? CoordinateButton = null;
 
-        static private readonly Image CoordinateSprite = NebulaAPI.AddonAsset.GetResource("Impostor/Coordinator/CoordinateButton.png")!.AsImage(115f)!;
+        /// <summary>
+        /// 累積スコア
+        /// </summary>
+        private int TotalScore = 0;
 
+        static private readonly Image CoordinateSprite = NebulaAPI.AddonAsset.GetResource("Neutral/Coordinator/CoordinateButton.png")!.AsImage(115f)!;
+
+
+        /// <summary>
+        /// 役職の引数を取得（スコアの引き継ぎ用）
+        /// </summary>
+        int[]? RuntimeAssignable.RoleArguments => [TotalScore];
 
         /// <summary>
         /// 役職能力のコンストラクタ。
         /// </summary>
         /// <param name="player">割り当て対象のプレイヤー</param>
-        /// <param name="isUsurped">能力が簒奪されている場合、true</param>
-        public Ability(GamePlayer player, bool isUsurped) : base(player, isUsurped)
+        /// <param name="arguments">引数（スコア引き継ぎ用）</param>
+        public Instance(GamePlayer player, int[] arguments) : base(player)
+        {
+            TotalScore = arguments.Length >= 1 ? arguments[0] : 0;
+        }
+
+        /// <summary>
+        /// 役職がアクティブ化された時の処理
+        /// </summary>
+        void RuntimeAssignable.OnActivated()
         {
             if (AmOwner)
             {
-                // Coordinateボタンを作成
+                // 初期クールダウンを計算（上書き有効時は設定値、無効時は中間値）
+                float minCooldown = CooldownMinOption;
+                float maxCooldown = CooldownMaxOption;
+                float initialCooldown;
+                
+                if (OverrideInitialCooldownOption)
+                {
+                    initialCooldown = InitialCooldownOption;
+                    NebulaPlugin.Log.Print($"Coordinator: Initial cooldown set to {initialCooldown}s (overridden)");
+                }
+                else
+                {
+                    initialCooldown = (minCooldown + maxCooldown) / 2f;
+                    NebulaPlugin.Log.Print($"Coordinator: Initial cooldown set to {initialCooldown}s (mid of {minCooldown}~{maxCooldown})");
+                }
+                
                 CoordinateButton = NebulaAPI.Modules.AbilityButton(this, MyPlayer, Virial.Compat.VirtualKeyInput.Ability,
-                    CoordinateCoolDownOption, "coordinate", CoordinateSprite, 
-                    null, _ => true)
-                    .SetAsUsurpableButton(this);
+                    maxCooldown, "coordinate", CoordinateSprite, 
+                    null, _ => true);
 
                 // ボタンをModAbilityButtonImplにキャストして設定
                 if (CoordinateButton is Nebula.Modules.ScriptComponents.ModAbilityButtonImpl buttonImpl)
                 {
-                    // 自動クールダウンリセットを無効化（距離計算で設定するため）
+                    // 自動クールダウンリセットを無効化
                     buttonImpl.UseCoolDownSupport = false;
                     
                     // カスタムタイマーを作成
-                    // visualMax=maxCooldownで動的クールダウンが正しく表示される
-                    float maxCooldown = KillCooldownMaxOption;
-                    float defaultCooldown = Coordinator.CoordinateCoolDownOption;
-                    const float initialCooldown = 10f;  // ゲーム開始時は固定10秒（Among Usの標準動作）
-                    NebulaPlugin.Log.Print($"Coordinator: Initial cooldown set to {initialCooldown}s (game start)");
                     var timer = new Nebula.Modules.ScriptComponents.AdvancedTimer(initialCooldown, maxCooldown)
-                        .SetDefault(defaultCooldown)
+                        .SetDefault(maxCooldown)
                         .SetAsAbilityCoolDown()
                         .Start(new float?(initialCooldown))
                         .Register(this, null);
@@ -123,12 +218,19 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
                 {
                     // プレイヤー選択画面を開く
                     OpenPlayerSelectScreen();
-                    
-                    // クールダウンは ExecuteCoordinate で距離に応じて設定される
                 };
 
                 CoordinateButton.SetLabel("coordinate");
             }
+        }
+
+        /// <summary>
+        /// タスクパネルにスコアを追加
+        /// </summary>
+        [Local]
+        void AppendScoreToTaskPanel(PlayerTaskTextLocalEvent ev)
+        {
+            ev.AppendText(Language.Translate("role.coordinator.taskText").Replace("%SCORE%", TotalScore.ToString()).Replace("%GOAL%", PointsToWin.ToString()).Color(CoordinatorTeamInfo.MyTeam!.UnityColor));
         }
 
         /// <summary>
@@ -150,8 +252,8 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             if (alivePlayers.Count == 0) return;
 
             // ShapeshifterMinigameのプレハブを検索
-            ShapeshifterMinigame prefab = null;
-            var foundObjects = Resources.FindObjectsOfTypeAll(Il2CppType.Of<ShapeshifterMinigame>());
+            ShapeshifterMinigame? prefab = null;
+            var foundObjects = UnityEngine.Resources.FindObjectsOfTypeAll(Il2CppType.Of<ShapeshifterMinigame>());
             foreach (var obj in foundObjects)
             {
                 var minigamePrefab = obj.TryCast<ShapeshifterMinigame>();
@@ -165,17 +267,13 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
 
             // ミニゲーム生成
             var minigame = Object.Instantiate(prefab).Cast<ShapeshifterMinigame>();
-            minigame.transform.SetParent(Camera.main.transform, false);
+            minigame.transform.SetParent(UnityEngine.Camera.main.transform, false);
             minigame.transform.localPosition = new Vector3(0f, 0f, -50f);
-
-            // ※ShapeshifterMinigameのBeginは呼ばずに手動で構築する (ターゲット条件が異なるため)
-            // 既存のBegin呼ぶと死体も含まれる可能性があるため
 
             // パネル配置用リスト
             Il2CppSystem.Collections.Generic.List<UiElement> controllerButtons = new Il2CppSystem.Collections.Generic.List<UiElement>();
 
             // パネル生成ループ
-            // ShapeshifterMinigameの定数を参照したいが、インスタンスから値を取る
             float xStart = minigame.XStart;
             float yStart = minigame.YStart;
             float xOffset = minigame.XOffset;
@@ -192,31 +290,30 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
                 panel.transform.localPosition = new Vector3(xStart + (float)col * xOffset, yStart + (float)row * yOffset, -1f);
                 
                 // プレイヤー情報セット
-                // SetPlayer(int targetId, NetworkedPlayerInfo info, Action onClick)
-                panel.SetPlayer(targetPlayer.PlayerId, targetPlayer.VanillaPlayer.Data, new Action(() => 
+                panel.SetPlayer(targetPlayer.PlayerId, targetPlayer.VanillaPlayer.Data, new System.Action(() => 
                 {
                     SetPlayer(targetPlayer.PlayerId);
                 }));
 
-                // 名前の色設定 (インポスターなら赤、それ以外は白)
-                panel.NameText.color = targetPlayer.VanillaPlayer.Data.Role.TeamType == RoleTeamTypes.Impostor ? Palette.ImpostorRed : Palette.White;
+                // 名前の色設定（すべて白、インポスターも区別しない）
+                panel.NameText.color = Palette.White;
 
                 // カーソル表示 (選択中のプレイヤーなら表示)
                 if (SelectedTarget != null && SelectedTarget.PlayerId == targetPlayer.PlayerId)
                 {
-                    var cursor = new GameObject("Cursor");
+                    var cursor = new UnityEngine.GameObject("Cursor");
                     cursor.transform.SetParent(minigame.transform);
                     cursor.transform.localPosition = new Vector3(0, 0, -5f);
-                    var cursorSprite = cursor.AddComponent<SpriteRenderer>();
+                    var cursorSprite = cursor.AddComponent<UnityEngine.SpriteRenderer>();
                     
                     if (MapBehaviour.Instance && MapBehaviour.Instance.HerePoint) 
                     {
                         cursorSprite.sprite = MapBehaviour.Instance.HerePoint.sprite;
-                        cursorSprite.color = Color.cyan;
+                        cursorSprite.color = CoordinatorTeamInfo.MyTeam!.UnityColor;
                     }
                 }
 
-                controllerButtons.Add(panel.Button); // Kept panel.Button as it's a UiElement, panel itself might not be.
+                controllerButtons.Add(panel.Button);
             }
 
             // 閉じるボタンの設定
@@ -266,11 +363,10 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             ClosePlayerSelectMinigame();
 
             // マップを開く (HudManager経由)
-            // OnOpenMapイベントでレイヤー生成をフックする
             HudManager.Instance.ToggleMapVisible(new MapOptions { Mode = MapOptions.Modes.Normal, AllowMovementWhileMapOpen = true });
         }
 
-        // マップが開かれた時のイベント (Doppelgangerを参考)
+        // マップが開かれた時のイベント
         [Local]
         void OnOpenMap(AbstractMapOpenEvent ev)
         {
@@ -285,13 +381,13 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             }
 
             // 通常マップイベントのみ対応
-            if (ev is MapOpenNormalEvent && !IsUsurped && !MeetingHud.Instance)
+            if (ev is MapOpenNormalEvent && !MeetingHud.Instance)
             {
                 NebulaPlugin.Log.Print("Coordinator: OnOpenMap triggered. Showing Target UI.");
 
                 if (mapLayer == null)
                 {
-                    // レイヤー未生成なら作成 (Doppelganger方式)
+                    // レイヤー未生成なら作成
                     mapLayer = UnityHelper.CreateObject<CoordinatorMapLayer>("CoordinatorLayer", MapBehaviour.Instance.transform, new Vector3(0f, 0f, -1f), null);
                     mapLayer.InjectCallback(this);
                 }
@@ -314,7 +410,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         public void OnRoomSelected(SystemTypes room, Vector2 clickedWorldPos)
         {
             NebulaPlugin.Log.Print($"Coordinator: OnRoomSelected called with room = {room}, clickedPos = ({clickedWorldPos.x}, {clickedWorldPos.y})");
-            ExecuteCoordinate(SelectedTarget, room, clickedWorldPos);
+            ExecuteCoordinate(SelectedTarget!, room, clickedWorldPos);
         }
 
         /// <summary>
@@ -332,7 +428,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         }
 
         /// <summary>
-        /// 座標判定を実行してキルクールダウンを設定する処理
+        /// 座標判定を実行してスコアを加算する処理
         /// </summary>
         /// <param name="target">ターゲットプレイヤー</param>
         /// <param name="targetRoom">推測した部屋タイプ</param>
@@ -345,104 +441,85 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
                 var infoColor = new Color(0.1f, 0.2f, 0.8f);
                 if (titleShower != null)
                 {
-                    titleShower.SetText($"{target.PlayerName} は既に死んでいるようだ...", infoColor, 3f, true);
+                    titleShower.SetText($"{target.Name} は既に死んでいるようだ...", infoColor, 3f, true);
                 }
                 AmongUsUtil.PlayCustomFlash(infoColor, 0f, 0.5f, 0.4f, 0f);
                 CloseAllScreens();
                 return;
             }
 
-            // 距離計算
+            // 統計：座標特定回数を記録
+            StatsCoordinate.Progress();
+
+            // 精度距離: クリック位置とターゲット位置の距離（小さいほど良い）
             Vector2 targetPos = target.TruePosition;
-            Vector2 myPos = MyPlayer.TruePosition;
-            
-            // 精度距離: クリック位置とターゲット位置の距離 (小さいほど良い)
             float accuracyDistance = Vector2.Distance(clickedWorldPos, targetPos);
-            // 射程距離: 自分とターゲットの距離 (大きいほど良い)
+            
+            // 射程距離: 自分からターゲットまでの距離（大きいほど良い）
+            Vector2 myPos = MyPlayer.TruePosition;
             float rangeDistance = Vector2.Distance(myPos, targetPos);
             
             NebulaPlugin.Log.Print($"Coordinator: Accuracy={accuracyDistance:F2}m, Range={rangeDistance:F2}m");
 
-            // キルクールダウン計算
-            // 近距離 = ペナルティ（クールダウン増加）
-            // 遠距離 = ボーナス（クールダウン減少）
-            // 正確 = ボーナス（クールダウン減少）
-            // 不正確 = ペナルティ（クールダウン増加）
-            float baseCooldown = CoordinateCoolDownOption;
-            float minCooldown = KillCooldownMinOption;
-            float maxCooldown = KillCooldownMaxOption;
-            
-            NebulaPlugin.Log.Print($"Coordinator: base={baseCooldown}, min={minCooldown}, max={maxCooldown}");
-            
-            // 計算用スケール
-            const float longRangeThreshold = 20f;   // これ以上で遠距離ボーナス最大（25->20に下げ）
-            const float shortRangeThreshold = 5f;   // これ以下で近距離ペナルティ最大
-            const float accuracyThreshold = 5f;     // これ以下で正確ボーナス最大
-            const float inaccuracyThreshold = 15f;  // これ以上で不正確ペナルティ最大
-            
-            // 距離効果（比重を重くする）
-            // 近距離（0-5m）: +10秒ペナルティ ～ 遠距離（20m+）: -17.5秒ボーナス
-            float distanceEffect;
-            if (rangeDistance < shortRangeThreshold)
-            {
-                // 近距離ペナルティ: 0m = +10秒, 5m = 0秒
-                distanceEffect = (1f - rangeDistance / shortRangeThreshold) * 10f;
-            }
-            else
-            {
-                // 遠距離ボーナス: 5m = 0秒, 20m+ = -17.5秒（12.5->17.5に増加）
-                distanceEffect = -Mathf.Min((rangeDistance - shortRangeThreshold) / (longRangeThreshold - shortRangeThreshold), 1f) * 17.5f;
-            }
-            
-            // 精度効果
-            // 正確（0-5m）: -5秒ボーナス ～ 不正確（15m+）: +7.5秒ペナルティ
-            float accuracyEffect;
-            if (accuracyDistance < accuracyThreshold)
-            {
-                // 正確ボーナス: 0m = -5秒, 5m = 0秒
-                accuracyEffect = -(1f - accuracyDistance / accuracyThreshold) * 5f;
-            }
-            else
-            {
-                // 不正確ペナルティ: 5m = 0秒, 15m+ = +7.5秒
-                accuracyEffect = Mathf.Min((accuracyDistance - accuracyThreshold) / (inaccuracyThreshold - accuracyThreshold), 1f) * 7.5f;
-            }
-            
-            // 最終計算: base + 距離効果 + 精度効果
-            float calculatedCooldown = baseCooldown + distanceEffect + accuracyEffect;
-            
-            // 範囲内に収める
-            float finalCooldown = Mathf.Clamp(calculatedCooldown, minCooldown, maxCooldown);
-            
-            NebulaPlugin.Log.Print($"Coordinator: distanceEffect={distanceEffect:F2}, accuracyEffect={accuracyEffect:F2}");
-            NebulaPlugin.Log.Print($"Coordinator: Calculated cooldown = {calculatedCooldown:F2}s, Final = {finalCooldown:F2}s");
-
             // ターゲットの現在部屋を判定
-            // ShipStatus.Instance.FastRoomsを使用
             bool isCorrect = false;
             
             if (ShipStatus.Instance.FastRooms.TryGetValue(targetRoom, out var room) && room.roomArea != null)
             {
-                // Collider2D.OverlapPoint で判定
                 if (room.roomArea.OverlapPoint(target.TruePosition))
                 {
                     isCorrect = true;
                 }
             }
 
-            // スコア計算（精度ベース: 0m = 5000pt, 10m = 0pt）
-            const float maxScoreDistance = 10f;
-            const int maxScore = 5000;
-            int score = (int)(Mathf.Clamp01(1f - accuracyDistance / maxScoreDistance) * maxScore);
+            // スコア計算
+            // 距離スコア: 最大3000pt（遠いほど高い）
+            // マップの端から端は約40m程度を想定
+            const float maxRangeDistance = 40f;  // これ以上で距離スコア最大
+            const int maxRangeScore = 3000;
+            float rangeRatio = UnityEngine.Mathf.Clamp01(rangeDistance / maxRangeDistance);
+            int rangeScore = (int)(rangeRatio * maxRangeScore);
+
+            // 精度スコア: 最大2000pt（正確なほど高い）
+            const float maxAccuracyDistance = 10f;  // これ以上で精度スコア0
+            const int maxAccuracyScore = 2000;
+            float accuracyRatio = UnityEngine.Mathf.Clamp01(1f - accuracyDistance / maxAccuracyDistance);
+            int accuracyScore = (int)(accuracyRatio * maxAccuracyScore);
+
+            // 合計スコア（最大5000pt）
+            int score = rangeScore + accuracyScore;
+
+            // 同じ部屋ペナルティ: 自分とターゲットが同じ部屋にいる場合 -1000pt
+            bool sameRoom = false;
+            if (ShipStatus.Instance.FastRooms.TryGetValue(targetRoom, out var myRoom) && myRoom.roomArea != null)
+            {
+                if (myRoom.roomArea.OverlapPoint(myPos))
+                {
+                    sameRoom = true;
+                    score -= 1000;
+                    NebulaPlugin.Log.Print($"Coordinator: Same room penalty! -1000pt");
+                }
+            }
             
-            NebulaPlugin.Log.Print($"Coordinator: Score = {score} (accuracy = {accuracyDistance:F2}m)");
+            NebulaPlugin.Log.Print($"Coordinator: RangeScore={rangeScore}, AccuracyScore={accuracyScore}, SameRoom={sameRoom}, Total={score}");
+
+            // クールダウン計算（スコアに応じて線形補間）
+            // 5000pt = 最小クールダウン, 0pt = 最大クールダウン, 2500pt = ちょうど中間
+            float minCooldown = CooldownMinOption;
+            float maxCooldown = CooldownMaxOption;
+            float scoreRatio = score / 5000f;  // 0.0 ~ 1.0
+            
+            // 高スコア(1.0) = minCooldown, 低スコア(0.0) = maxCooldown
+            float cooldown = UnityEngine.Mathf.Lerp(maxCooldown, minCooldown, scoreRatio);
+            
+            NebulaPlugin.Log.Print($"Coordinator: Cooldown = {cooldown:F1}s (min={minCooldown}, max={maxCooldown}, score={score})");
 
             if (isCorrect)
             {
-                NebulaPlugin.Log.Print($"Coordinator: Guess CORRECT! Killing {target.Name} with cooldown {finalCooldown:F2}s");
+                NebulaPlugin.Log.Print($"Coordinator: Guess CORRECT! Adding {score} points.");
 
-                // 正解：ターゲットをキル (RemoteKill)
-                MyPlayer.MurderPlayer(target, PlayerState.Dead, EventDetail.Kill, KillParameter.RemoteKill, KillCondition.BothAlive);
+                // 正解：スコアを加算
+                TotalScore += score;
 
                 // スコア表示（緑色）+ フラッシュ
                 var currentGame = NebulaAPI.CurrentGame;
@@ -451,32 +528,23 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
                     var titleShower = currentGame.GetModule<Nebula.Game.TitleShower>();
                     if (titleShower != null)
                     {
-                        titleShower.SetText($"{score} POINT!", new Color(0.2f, 1f, 0.4f), 3f, true);
+                        titleShower.SetText($"+{score} POINT! (Total: {TotalScore}/{PointsToWin})", new Color(0.2f, 1f, 0.4f), 3f, true);
                     }
                 }
                 Nebula.Utilities.AmongUsUtil.PlayCustomFlash(new Color(0.2f, 1f, 0.4f), 0f, 0.5f, 0.4f, 0f);
 
-                // キル処理後にクールダウンを設定（遅延させることでMurderPlayerの内部リセットを回避）
-                float cooldownToSet = finalCooldown;
-                NebulaManager.Instance.ScheduleDelayAction(() =>
+                // 勝利判定
+                if (TotalScore >= PointsToWin)
                 {
-                    if (CoordinateButton?.CoolDownTimer is Nebula.Modules.ScriptComponents.AdvancedTimer timerCorrect)
-                    {
-                        timerCorrect.SetVisualMax(cooldownToSet);
-                        timerCorrect.Start(new float?(cooldownToSet));
-                        NebulaPlugin.Log.Print($"Coordinator: Timer started with {cooldownToSet}s (delayed)");
-                    }
-                });
-
-                // キル音を再生 (自分のみ)
-                if (PlayerControl.LocalPlayer != null)
-                {
-                    SoundManager.Instance.PlaySound(PlayerControl.LocalPlayer.KillSfx, false, 0.8f);
+                    NebulaPlugin.Log.Print($"Coordinator: WIN! Total score {TotalScore} >= {PointsToWin}");
+                    var bitmask = BitMasks.AsPlayer();
+                    bitmask.Add(MyPlayer);
+                    NebulaAPI.CurrentGame?.RequestGameEnd(CoordinatorTeamInfo.End, bitmask);
                 }
             }
             else
             {
-                NebulaPlugin.Log.Print($"Coordinator: Guess WRONG! Target {target.Name} is not in {targetRoom}. Cooldown = {finalCooldown:F2}s");
+                NebulaPlugin.Log.Print($"Coordinator: Guess WRONG! Target {target.Name} is not in {targetRoom}.");
                 
                 // スコア表示（赤色）+ フラッシュ
                 var currentGame = NebulaAPI.CurrentGame;
@@ -485,26 +553,26 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
                     var titleShower = currentGame.GetModule<Nebula.Game.TitleShower>();
                     if (titleShower != null)
                     {
-                        titleShower.SetText($"{score} POINT...", new Color(1f, 0.3f, 0.3f), 3f, true);
+                        titleShower.SetText($"{score} POINT... (Total: {TotalScore}/{PointsToWin})", new Color(1f, 0.3f, 0.3f), 3f, true);
                     }
                 }
                 Nebula.Utilities.AmongUsUtil.PlayCustomFlash(new Color(1f, 0.3f, 0.3f), 0f, 0.5f, 0.4f, 0f);
                 
-                // 不正解：ターゲットに通知 + 距離計算クールダウンを設定（通知がペナルティ）
+                // 不正解：ターゲットに通知（通知がペナルティ）
                 CoordinatorHelpers.RpcHolder.RpcNotifyTarget.Invoke(target.PlayerId);
-                
-                // 遅延させてクールダウンを設定
-                float cooldownToSetWrong = finalCooldown;
-                NebulaManager.Instance.ScheduleDelayAction(() =>
-                {
-                    if (CoordinateButton?.CoolDownTimer is Nebula.Modules.ScriptComponents.AdvancedTimer timerWrong)
-                    {
-                        timerWrong.SetVisualMax(cooldownToSetWrong);
-                        timerWrong.Start(new float?(cooldownToSetWrong));
-                        NebulaPlugin.Log.Print($"Coordinator: Timer started with {cooldownToSetWrong}s (delayed)");
-                    }
-                });
             }
+
+            // クールダウンを設定
+            NebulaManager.Instance.ScheduleDelayAction(() =>
+            {
+                if (CoordinateButton?.CoolDownTimer is Nebula.Modules.ScriptComponents.AdvancedTimer timer)
+                {
+                    // ビジュアル用の最大値も更新してからスタート
+                    timer.SetDefault(cooldown);
+                    timer.Start(new float?(cooldown));
+                    NebulaPlugin.Log.Print($"Coordinator: Timer started with {cooldown}s (visual max updated)");
+                }
+            });
 
             // 画面を閉じる
             CloseAllScreens();
@@ -520,12 +588,36 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         }
 
         /// <summary>
-        /// 会議開始時に画面を閉じる
+        /// 前回通知した閾値レベル（0=未通知、1=50%、2=75%、3=90%）
+        /// </summary>
+        private int LastNotifiedThreshold = 0;
+
+        /// <summary>
+        /// 会議開始時に画面を閉じ、閾値を超えた場合スコアを全員に共有
         /// </summary>
         [Local]
         void OnMeetingStart(MeetingStartEvent ev)
         {
             CloseAllScreens();
+
+            if (!AmOwner) return;
+
+            // 現在の進捗率を計算
+            float progress = (float)TotalScore / PointsToWin;
+            
+            // 閾値チェック: 50%, 75%, 90%
+            int currentThreshold = 0;
+            if (progress >= 0.90f) currentThreshold = 3;
+            else if (progress >= 0.75f) currentThreshold = 2;
+            else if (progress >= 0.50f) currentThreshold = 1;
+
+            // 新しい閾値を超えた場合のみ通知
+            if (currentThreshold > LastNotifiedThreshold)
+            {
+                LastNotifiedThreshold = currentThreshold;
+                CoordinatorHelpers.RpcHolder.RpcShareScore.Invoke((MyPlayer.PlayerId, TotalScore, PointsToWin));
+                NebulaPlugin.Log.Print($"Coordinator: Score shared at {progress * 100:F0}% (threshold {currentThreshold})");
+            }
         }
 
         /// <summary>
@@ -536,10 +628,12 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         {
             if (CoordinateButton?.CoolDownTimer is Nebula.Modules.ScriptComponents.AdvancedTimer timer)
             {
-                float cooldown = MyPlayer.TeamKillCooldown;
-                timer.SetVisualMax(cooldown);
+                // 会議後は中間値のクールダウンでリセット
+                float minCooldown = CooldownMinOption;
+                float maxCooldown = CooldownMaxOption;
+                float cooldown = (minCooldown + maxCooldown) / 2f;
                 timer.Start(new float?(cooldown));
-                NebulaPlugin.Log.Print($"Coordinator: Cooldown reset after meeting to {cooldown}s");
+                NebulaPlugin.Log.Print($"Coordinator: Cooldown reset after meeting to {cooldown}s (mid of {minCooldown}~{maxCooldown})");
             }
         }
 
@@ -553,7 +647,6 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             // マップを閉じる（HudManager経由）
             if (MapBehaviour.Instance && MapBehaviour.Instance.IsOpen)
             {
-                // 引数が必要
                 HudManager.Instance.ToggleMapVisible(new MapOptions { Mode = MapOptions.Modes.Normal });
             }
 

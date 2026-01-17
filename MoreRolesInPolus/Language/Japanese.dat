@@ -29,19 +29,23 @@
 "button.label.researcher.track" : "追跡"
 "ui.action.researcher.switch" : "モード切替"
 
-## Coordinator - Impostor
+## Coordinator - Neutral
+"teams.coordinator" : "コーディネーター"
 "role.coordinator.name" : "コーディネーター"
-"role.coordinator.short" : "座標"
-"role.coordinator.blurb" : "座標を読み解け"
-"options.role.coordinator.coordinateCoolDown" : "座標特定クールダウン"
-"options.role.coordinator.killCooldownBase" : "キルクールダウン（基本値）"
-"options.role.coordinator.killCooldownMin" : "キルクールダウン（最小値）"
-"options.role.coordinator.killCooldownMax" : "キルクールダウン（最大値）"
-"options.role.coordinator.detail" : "プレイヤーを選択し、マップ上でその人の位置を推測します。<br>精度が高く、自分から遠いほどキルクールダウンが短くなります。<br>部屋を当てれば成功、外せば<color=red>対象に通知</color>がいきます。"
+"role.coordinator.short" : "コー"
+"role.coordinator.blurb" : "すべての座標は、その手の中に"
+"options.role.coordinator.cooldownMin" : "クールダウン（最小：高スコア時）"
+"options.role.coordinator.cooldownMax" : "クールダウン（最大：低スコア時）"
+"options.role.coordinator.overrideInitialCooldown" : "初期クールダウンを上書き"
+"options.role.coordinator.initialCooldown" : "初期クールダウン"
+"options.role.coordinator.pointsMultiplier" : "勝利に必要なポイント倍率（5000x）"
+"options.role.coordinator.detail" : "プレイヤーを選択し、マップ上でその人の位置を推測します。<br>部屋を当てればスコア獲得、外せば<color=red>対象に通知</color>がいきます。"
 "button.label.coordinate" : "座標特定"
 "coordinator.selectPlayer" : "ターゲットを選択"
 "coordinator.selectRoom" : "部屋を選択"
-"coordinator.notification.failed" : "殺気を感じたが、気のせいだったようだ..."
+"coordinator.notification.failed" : "見られている気がしたが、気のせいだったようだ..."
+"role.coordinator.taskText" : "[Coordinator] %SCORE%/%GOAL% pt"
+"end.coordinator" : "コーディネーター%EXTRA%勝利"
 
 ### junjun Made
 
