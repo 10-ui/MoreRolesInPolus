@@ -25,7 +25,7 @@
 
 "role.researcher.ability.title" : "固有能力 "事実の告発""
 "role.researcher.ability.main" : "対象者を追跡、過去ログを取得することができます。"
-"role.researcher.ability.survey" : "<title>調査</title>調査を行うことで、能力を使用した時点から<var>%SEC%</var>秒前までの対象者の行動を確認できます。"
+"role.researcher.ability.survey" : "<title>調査</title>調査を行うことで、能力を使用した時点から<var>%LOGSEC%</var>秒前までの対象者の行動を確認できます。"
 "role.researcher.ability.track" : "<title>追跡</title>追跡を行うことで、能力を使用した時点から次の緊急会議までの対象者の行動を確認できます。"
 
 "options.role.researcher.detail" : "リサーチャーは他のプレイヤーの行動を追跡、調査できます。"
@@ -37,11 +37,13 @@
 "button.label.researcher.track" : "追跡"
 "ui.action.researcher.switch" : "モード切替"
 
-"achievement.researcher.challenge.title" : "安楽椅子探偵"
-"achievement.researcher.challenge.goal" : "探知トラップで8人の動向を把握する。"
+"achievement.researcher.challenge.title" : "深淵に飲み込まれし者"
+"achievement.researcher.challenge.goal" : "1ターンで調査を3回行い、次の会議で対象者が一人も吊られない。"
 "achievement.researcher.challenge.cond" : "会議のたびに把握人数はリセットされる"
 "achievement.researcher.challenge.flavor" : ""ただ、どこで死んだのかは本当に分からないんです。" ―破られた議事録より"
+"achievement.researcher.challenge.splitted.1" : "探偵"
 "achievement.researcher.challenge.splitted.2" : "探偵"
+"achievement.researcher.challenge.splitted.3" : "探偵"
 
 ## Coordinator - Impostor
 "role.coordinator.name" : "コーディネーター"
