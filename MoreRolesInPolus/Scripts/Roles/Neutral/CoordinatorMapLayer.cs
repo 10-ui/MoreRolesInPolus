@@ -144,9 +144,10 @@ namespace MoreRolesInPolus.Roles.Neutral
             worldPosOnMinimap.z = -25f;
             dotRenderer.transform.localPosition = worldPosOnMinimap;
 
-            // マップ領域内なら緑、領域外なら赤
+            // マップ領域内かつ部屋の中なら緑、それ以外は赤
             bool isValidArea = Nebula.Map.MapData.GetCurrentMapData().CheckMapArea(worldPos, 0.2f);
-            dotRenderer.color = isValidArea ? Color.green : Color.red;
+            bool isInsideRoom = GetRoomAtPosition(worldPos) != SystemTypes.Hallway;
+            dotRenderer.color = (isValidArea && isInsideRoom) ? Color.green : Color.red;
         }
 
         /// <summary>
@@ -166,10 +167,17 @@ namespace MoreRolesInPolus.Roles.Neutral
                 return;
             }
 
-            UnityEngine.Debug.Log($"CoordinatorMapLayer: OnClick at world({worldPos.x}, {worldPos.y})");
-
             // クリック位置から部屋を判定
             SystemTypes selectedRoom = GetRoomAtPosition(worldPos);
+
+            // 部屋の外（Hallway扱い）のクリックは無視
+            if (selectedRoom == SystemTypes.Hallway)
+            {
+                UnityEngine.Debug.Log("CoordinatorMapLayer: Click ignored (outside room)");
+                return;
+            }
+
+            UnityEngine.Debug.Log($"CoordinatorMapLayer: OnClick at world({worldPos.x}, {worldPos.y})");
             
             UnityEngine.Debug.Log($"CoordinatorMapLayer: Selected room = {selectedRoom}");
 
