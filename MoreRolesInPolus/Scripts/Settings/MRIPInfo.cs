@@ -48,11 +48,6 @@ public static class MRIPInfo
     public static string Version => Addon?.Version ?? "Unknown";
     
     /// <summary>
-    /// 作者名（addon.metaから取得）
-    /// </summary>
-    public static string Author => Addon?.Author ?? "Unknown";
-    
-    /// <summary>
     /// 完全なバージョン文字列を取得
     /// CI/CDがaddon.metaのVersionを自動更新するため、そのまま使用
     /// </summary>
@@ -63,22 +58,14 @@ public static class MRIPInfo
         if (Version.Contains("Snapshot", System.StringComparison.OrdinalIgnoreCase))
         {
             // Snapshot版: CI が "Snapshot_26.01.05a" の形式で設定済み
-            return $" + {ShortName} {Version} by{Author}";
+            return $" + {ShortName} {Version}";
         }
         else
         {
             // 正式版: "0.1.5" → "v0.1.5" 形式に変換
-            return $" + {ShortName} v{Version} by{Author}";
+            return $" + {ShortName} v{Version}";
         }
     }
     
-    /// <summary>
-    /// デバッグ用のログプレフィックス
-    /// </summary>
-    /// <param name="message">メッセージ</param>
-    /// <returns>プレフィックス付きメッセージ</returns>
-    public static string LogPrefix(string message)
-    {
-        return $"{ShortName}: {message}";
-    }
+
 }
