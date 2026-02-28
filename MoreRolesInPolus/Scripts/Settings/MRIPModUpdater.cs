@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -84,11 +84,13 @@ public static class MRIPModUpdater
                 }
                 catch (Exception ex)
                 {
+                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Failed to delete old file: {ex.Message}"));
                 }
             }
         }
         catch (Exception ex)
         {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"CleanupOldAddonFiles error: {ex.Message}"));
         }
     }
     
@@ -186,6 +188,7 @@ public static class MRIPModUpdater
         {
             if (string.IsNullOrEmpty(DownloadUrl))
             {
+                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix("Download URL is empty."));
                 yield break;
             }
             
@@ -233,6 +236,7 @@ public static class MRIPModUpdater
         
         private IEnumerator CoDownloadAndInstall(string url, Action<bool, string> callback)
         {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Downloading from: {url}"));
             
             HttpClient client = GetHttpClient();
             HttpResponseMessage? response = null;
@@ -292,6 +296,7 @@ public static class MRIPModUpdater
                     }
                     catch (Exception ex)
                     {
+                        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Failed to dispose addon: {ex.Message}"));
                     }
                 }
                 
@@ -304,6 +309,7 @@ public static class MRIPModUpdater
             }
             catch (Exception ex)
             {
+                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"Failed to save file: {ex.Message}"));
                 callback(false, $"ファイル保存失敗:\n{ex.Message}");
             }
             
@@ -348,6 +354,7 @@ public static class MRIPModUpdater
             }
             catch (Exception ex)
             {
+                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix($"Error cleaning old files: {ex.Message}"));
             }
         }
         
@@ -437,6 +444,7 @@ public static class MRIPModUpdater
         try
         {
             string url = GetReleasesUrl(NextPage);
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Fetching releases from: {url}"));
             
             var response = await GetHttpClient().GetAsync(url);
             
@@ -488,6 +496,7 @@ public static class MRIPModUpdater
             }
             else
             {
+                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"Failed to fetch releases: {response.StatusCode}"));
                 MaybeNoMorePages = true;
             }
             
@@ -495,6 +504,7 @@ public static class MRIPModUpdater
         }
         catch (Exception ex)
         {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"Error fetching releases: {ex.Message}"));
             MaybeNoMorePages = true;
         }
         

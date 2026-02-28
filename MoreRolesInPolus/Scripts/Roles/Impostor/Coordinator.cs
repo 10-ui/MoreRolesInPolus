@@ -109,6 +109,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
                     float maxCooldown = KillCooldownMaxOption;
                     float defaultCooldown = Coordinator.CoordinateCoolDownOption;
                     const float initialCooldown = 10f;  // ゲーム開始時は固定10秒（Among Usの標準動作）
+                    NebulaPlugin.Log.Print($"Coordinator: Initial cooldown set to {initialCooldown}s (game start)");
                     var timer = new Nebula.Modules.ScriptComponents.AdvancedTimer(initialCooldown, maxCooldown)
                         .SetDefault(defaultCooldown)
                         .SetAsAbilityCoolDown()
@@ -241,6 +242,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         {
             if (PlayerSelectMinigame != null)
             {
+                NebulaPlugin.Log.Print("Coordinator: Closing PlayerSelectMinigame");
                 ControllerManager.Instance.CloseOverlayMenu(PlayerSelectMinigame.name);
                 Object.Destroy(PlayerSelectMinigame.gameObject);
                 PlayerSelectMinigame = null;
@@ -258,6 +260,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             if (target == null) return;
 
             SelectedTarget = target;
+            NebulaPlugin.Log.Print($"Coordinator: Target set to {SelectedTarget.Name}");
             
             // プレイヤー選択画面を閉じる
             ClosePlayerSelectMinigame();
@@ -271,10 +274,12 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         [Local]
         void OnOpenMap(AbstractMapOpenEvent ev)
         {
+            NebulaPlugin.Log.Print($"Coordinator: OnOpenMap called. Event type: {ev?.GetType().Name}");
             
             // ターゲットが選択されていない、または死んでいる場合は何もしない
             if (SelectedTarget == null || MyPlayer.IsDead) 
             {
+                NebulaPlugin.Log.Print($"Coordinator: OnOpenMap - early return. SelectedTarget: {SelectedTarget?.Name ?? "null"}, MyPlayer.IsDead: {MyPlayer.IsDead}");
                 if (mapLayer != null) mapLayer.gameObject.SetActive(false);
                 return;
             }
@@ -282,6 +287,8 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             // 通常マップイベントのみ対応
             if (ev is MapOpenNormalEvent && !IsUsurped && !MeetingHud.Instance)
             {
+                NebulaPlugin.Log.Print("Coordinator: OnOpenMap triggered. Showing Target UI.");
+
                 if (mapLayer == null)
                 {
                     // レイヤー未生成なら作成 (Doppelganger方式)
@@ -306,6 +313,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
         /// <param name="clickedWorldPos">クリックしたワールド座標</param>
         public void OnRoomSelected(SystemTypes room, Vector2 clickedWorldPos)
         {
+            NebulaPlugin.Log.Print($"Coordinator: OnRoomSelected called with room = {room}, clickedPos = ({clickedWorldPos.x}, {clickedWorldPos.y})");
             ExecuteCoordinate(SelectedTarget, room, clickedWorldPos);
         }
 
@@ -353,6 +361,8 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             // 射程距離: 自分とターゲットの距離 (大きいほど良い)
             float rangeDistance = Vector2.Distance(myPos, targetPos);
             
+            NebulaPlugin.Log.Print($"Coordinator: Accuracy={accuracyDistance:F2}m, Range={rangeDistance:F2}m");
+
             // キルクールダウン計算
             // 近距離 = ペナルティ（クールダウン増加）
             // 遠距離 = ボーナス（クールダウン減少）
@@ -361,6 +371,8 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             float baseCooldown = CoordinateCoolDownOption;
             float minCooldown = KillCooldownMinOption;
             float maxCooldown = KillCooldownMaxOption;
+            
+            NebulaPlugin.Log.Print($"Coordinator: base={baseCooldown}, min={minCooldown}, max={maxCooldown}");
             
             // 計算用スケール
             const float longRangeThreshold = 20f;   // これ以上で遠距離ボーナス最大（25->20に下げ）
@@ -402,6 +414,8 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             // 範囲内に収める
             float finalCooldown = Mathf.Clamp(calculatedCooldown, minCooldown, maxCooldown);
             
+            NebulaPlugin.Log.Print($"Coordinator: distanceEffect={distanceEffect:F2}, accuracyEffect={accuracyEffect:F2}");
+            NebulaPlugin.Log.Print($"Coordinator: Calculated cooldown = {calculatedCooldown:F2}s, Final = {finalCooldown:F2}s");
 
             // ターゲットの現在部屋を判定
             // ShipStatus.Instance.FastRoomsを使用
@@ -421,11 +435,14 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             const int maxScore = 5000;
             int score = (int)(Mathf.Clamp01(1f - accuracyDistance / maxScoreDistance) * maxScore);
             
+            NebulaPlugin.Log.Print($"Coordinator: Score = {score} (accuracy = {accuracyDistance:F2}m)");
+
             if (isCorrect)
             {
+                NebulaPlugin.Log.Print($"Coordinator: Guess CORRECT! Killing {target.Name} with cooldown {finalCooldown:F2}s");
 
                 // 正解：ターゲットをキル (RemoteKill)
-                MyPlayer.MurderPlayer(target, PlayerState.Sniped, EventDetail.Kill, KillParameter.RemoteKill, KillCondition.BothAlive);
+                MyPlayer.MurderPlayer(target, PlayerState.Dead, EventDetail.Kill, KillParameter.RemoteKill, KillCondition.BothAlive);
 
                 // スコア表示（緑色）+ フラッシュ
                 var currentGame = NebulaAPI.CurrentGame;
@@ -447,6 +464,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
                     {
                         timerCorrect.SetVisualMax(cooldownToSet);
                         timerCorrect.Start(new float?(cooldownToSet));
+                        NebulaPlugin.Log.Print($"Coordinator: Timer started with {cooldownToSet}s (delayed)");
                     }
                 });
 
@@ -458,6 +476,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
             }
             else
             {
+                NebulaPlugin.Log.Print($"Coordinator: Guess WRONG! Target {target.Name} is not in {targetRoom}. Cooldown = {finalCooldown:F2}s");
                 
                 // スコア表示（赤色）+ フラッシュ
                 var currentGame = NebulaAPI.CurrentGame;
@@ -482,6 +501,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
                     {
                         timerWrong.SetVisualMax(cooldownToSetWrong);
                         timerWrong.Start(new float?(cooldownToSetWrong));
+                        NebulaPlugin.Log.Print($"Coordinator: Timer started with {cooldownToSetWrong}s (delayed)");
                     }
                 });
             }
@@ -519,6 +539,7 @@ public class Coordinator : DefinedSingleAbilityRoleTemplate<Coordinator.Ability>
                 float cooldown = MyPlayer.TeamKillCooldown;
                 timer.SetVisualMax(cooldown);
                 timer.Start(new float?(cooldown));
+                NebulaPlugin.Log.Print($"Coordinator: Cooldown reset after meeting to {cooldown}s");
             }
         }
 
