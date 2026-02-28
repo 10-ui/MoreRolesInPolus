@@ -20,7 +20,7 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
     static private readonly BoolConfiguration showMeetingInFlash = NebulaAPI.Configurations.Configuration("options.role.barclaw.showMeetingInFlash", false);
     static private readonly FloatConfiguration meetingDelayOption = NebulaAPI.Configurations.Configuration("options.role.barclaw.meetingDelayOption", (0f, 5f, 0.5f), 2f, FloatConfigurationDecorator.Second);
     static private readonly FloatConfiguration meetingDelayDispersionOption = NebulaAPI.Configurations.Configuration("options.role.barclaw.meetingDelayDispersionOption", (0f, 10f, 0.25f), 3f, FloatConfigurationDecorator.Second);
-    //死んでいても緊急会議がが発動するか
+    //死んでいても緊急会議が発動するか
     static private readonly BoolConfiguration AllowGhostMeeting = NebulaAPI.Configurations.Configuration("options.role.barclaw.allowGhostMeeting", false);
     static public Barclaw MyRole = new Barclaw();
     RuntimeModifier RuntimeAssignableGenerator<RuntimeModifier>.CreateInstance(GamePlayer player, int[] arguments) => new Instance(player);
@@ -52,18 +52,18 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
         [Local]
         void OnKillPlayer(PlayerKillPlayerEvent ev)
         {
-
+            if (!MyPlayer.IsAlive) return;
             if (AmOwner && !nowMeeting)
             {
-                if (MyPlayer == ev.Dead)
+                if (MyPlayer.IsDead)
                 {
                     myDead = true;
                 }
 
                 numOfKillCount++;
-                deadPlayer.Add(ev.Dead); 
+                deadPlayer.Add(ev.Dead);
 
-                if (numOfKillCount >= numOfDeadRequired && !myDead && numOfMaxButton >= numOfButtonCount)
+                if (numOfKillCount == numOfDeadRequired && !myDead && numOfMaxButton >= numOfButtonCount)
                 {
                     if(enableAfterSecondTurn && nowTurn < 2) return;
    
@@ -71,8 +71,6 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
 
                     float t = Mathn.Max(0.1f, meetingDelayOption) + meetingDelayDispersionOption * (float)System.Random.Shared.NextDouble();
                     
-
-
                     if(nowMeeting) return;
                     NebulaManager.Instance.StartCoroutine(WaitAndCallCoroutine(t).WrapToIl2Cpp());
                     numOfButtonCount ++;
@@ -88,10 +86,11 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
             // 待機後に条件がまだ満たされていれば実行
             if (!AmOwner) yield break;
             if (nowMeeting) yield break;
-            if (myDead && !AllowGhostMeeting) yield break;
+            if ((myDead || MyPlayer.IsDead) && !AllowGhostMeeting) yield break;
 
-            CallMeetingHelper.CallMeeting(MyPlayer);
+            CallMeetingHelper.CallMeeting(MyPlayer, nowMeeting);
         }
+
 
 
         [Local]
