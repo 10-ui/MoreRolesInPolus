@@ -1,4 +1,4 @@
-﻿using MoreRolesInPolus.Scripts.Roles.script;
+﻿using MoreRolesInPolus.Scripts.Utils;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -90,8 +90,6 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
 
             CallMeetingHelper.CallMeeting(MyPlayer, nowMeeting);
         }
-
-
 
         [Local]
         void OnPlayerRevived(PlayerReviveEvent ev)

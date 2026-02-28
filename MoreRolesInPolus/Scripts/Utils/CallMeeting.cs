@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace MoreRolesInPolus.Scripts.Roles.script
+namespace MoreRolesInPolus.Scripts.Utils
 {
     public static class CallMeetingHelper
     {
