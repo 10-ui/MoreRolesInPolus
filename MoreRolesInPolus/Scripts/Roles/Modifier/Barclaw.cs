@@ -55,13 +55,13 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
             if (!MyPlayer.IsAlive) return;
             if (AmOwner && !nowMeeting)
             {
-                if (MyPlayer == ev.Dead)
+                if (MyPlayer.IsDead)
                 {
                     myDead = true;
                 }
 
                 numOfKillCount++;
-                deadPlayer.Add(ev.Dead); 
+                deadPlayer.Add(ev.Dead);
 
                 if (numOfKillCount == numOfDeadRequired && !myDead && numOfMaxButton >= numOfButtonCount)
                 {
