@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file MRIPSettingsButton.cs
  * @brief Nebulaの設定画面（「ネブラ」ボタン）にMRIPボタンを追加 + 起動時自動更新チェック
  * @details
@@ -33,7 +33,6 @@ public static class MRIPMainMenuPatchSetup
             // この時点で古いファイルは読み込みスキップされてDispose()済み = ロック解除済み
             MRIPModUpdater.CleanupOldAddonFiles();
             
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Setting up MainMenu patch..."));
             
             HarmonyInstance = new Harmony("MoreRolesInPolus.MainMenuPatch");
             
@@ -49,11 +48,9 @@ public static class MRIPMainMenuPatchSetup
             // ResetScreenパッチも適用
             MRIPMenuClearScreenPatch.Apply(HarmonyInstance);
             
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("MainMenu patch applied successfully!"));
         }
         catch (System.Exception ex)
         {
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"Failed to setup MainMenu patch: {ex.Message}\n{ex.StackTrace}"));
         }
     }
 }
@@ -79,11 +76,9 @@ public static class MRIPMenuClearScreenPatch
             var postfix = typeof(MRIPMenuClearScreenPatch).GetMethod(nameof(ResetScreenPostfix));
             harmony.Patch(resetScreenMethod, postfix: new HarmonyMethod(postfix));
             Patched = true;
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("ResetScreen patch applied!"));
         }
         catch (System.Exception ex)
         {
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"Failed to apply ResetScreen patch: {ex.Message}"));
         }
     }
     
@@ -121,7 +116,6 @@ public static class MRIPMainMenuPatch
     {
         try
         {
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("MainMenuAwake Postfix called..."));
             MainMenuInstance = __instance;
             
             // ボタン追加と自動更新チェック
@@ -129,7 +123,6 @@ public static class MRIPMainMenuPatch
         }
         catch (System.Exception ex)
         {
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"MainMenuAwakePostfix error: {ex.Message}\n{ex.StackTrace}"));
         }
     }
     
@@ -145,12 +138,10 @@ public static class MRIPMainMenuPatch
         }
         
         // 自動更新チェックは無効化
-        // NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Starting auto-update check..."));
         // MRIPAutoUpdater.OnMainMenuLoaded();
         
         // NebulaScreenへのボタン追加を継続的に監視
         // NebulaScreenは「ネブラ」ボタンを押した時に表示されるので、アクティブになったタイミングで追加
-        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Starting NebulaScreen monitor..."));
         mainMenu.StartCoroutine(MonitorNebulaScreen(mainMenu).WrapToIl2Cpp());
     }
     
@@ -179,7 +170,6 @@ public static class MRIPMainMenuPatch
                 Transform? existingButton = nebulaScreen!.transform.Find("MRIPSettingsButton");
                 if (existingButton == null)
                 {
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("NebulaScreen became active, adding button..."));
                     AddButtonToNebulaScreen(nebulaScreen, mainMenu);
                     ButtonAdded = true;
                 }
@@ -193,7 +183,6 @@ public static class MRIPMainMenuPatch
             // NebulaScreenが閉じられたらリセット（次回開いた時に再追加できるように）
             if (wasNebulaScreenActive && !isNebulaScreenActive)
             {
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("NebulaScreen closed, resetting button state."));
                 ButtonAdded = false;
             }
             
@@ -202,13 +191,11 @@ public static class MRIPMainMenuPatch
             // ロビーに入ったら終了（AmongUs.GameOptions.GameOptionsManagerが初期化されている）
             if (LobbyBehaviour.Instance != null)
             {
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Entered lobby, stopping monitor."));
                 ButtonAdded = false;
                 yield break;
             }
         }
         
-        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Monitor timeout after 10 minutes."));
     }
     
     /// <summary>
@@ -218,7 +205,6 @@ public static class MRIPMainMenuPatch
     {
         try
         {
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Adding button to NebulaScreen..."));
             
             // 既存のボタンを探す
             PassiveButton? templateButton = null;
@@ -240,11 +226,9 @@ public static class MRIPMainMenuPatch
             
             if (templateButton == null)
             {
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix("No template button found!"));
                 return;
             }
             
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Found {buttonCount} buttons, using first as template"));
             
             // テンプレートボタンの位置情報
             UnityEngine.Vector3 templatePos = templateButton.transform.localPosition;
@@ -286,7 +270,6 @@ public static class MRIPMainMenuPatch
                 }
             }
             
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Button spacing: X={spacingX}, Y={spacingY}"));
             
             // ボタンを複製
             GameObject mripButtonObj = UnityEngine.Object.Instantiate(templateButton.gameObject, nebulaScreen.transform);
@@ -300,7 +283,6 @@ public static class MRIPMainMenuPatch
             
             mripButtonObj.transform.localPosition = new UnityEngine.Vector3(newX, newY, templatePos.z);
             
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Button position: ({newX}, {newY})"));
             
             // TextTranslatorTMPを無効化（翻訳で上書きされないように）
             var translators = mripButtonObj.GetComponentsInChildren<TextTranslatorTMP>(true);
@@ -314,7 +296,6 @@ public static class MRIPMainMenuPatch
             foreach (var tmp in textMeshPros)
             {
                 tmp.text = Language.Translate("settings.mrip.button.name").Replace("*", "");
-                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Set button text: {tmp.text}"));
             }
             
             // クリックイベントを設定
@@ -324,7 +305,6 @@ public static class MRIPMainMenuPatch
                 mripButton.OnClick = new Button.ButtonClickedEvent();
                 mripButton.OnClick.AddListener((System.Action)delegate
                 {
-                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("MRIP button clicked!"));
                     VanillaAsset.PlaySelectSE();
                     mainMenu.ResetScreen();
                     
@@ -343,15 +323,10 @@ public static class MRIPMainMenuPatch
             
             // デバッグ情報
             var sr = mripButtonObj.GetComponentInChildren<SpriteRenderer>(true);
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Button has SpriteRenderer: {sr != null}"));
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Button active: {mripButtonObj.activeSelf}, hierarchy: {mripButtonObj.activeInHierarchy}"));
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Button layer: {mripButtonObj.layer}"));
             
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("MRIP button added to NebulaScreen!"));
         }
         catch (System.Exception ex)
         {
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"Error adding button: {ex.Message}\n{ex.StackTrace}"));
         }
     }
     
@@ -362,7 +337,6 @@ public static class MRIPMainMenuPatch
     {
         try
         {
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Creating MRIP versions screen..."));
             
             // accountButtonsの親と同じ階層に配置（Nebulaと同じ方式）
             MRIPVersionsScreen = UnityHelper.CreateObject("MRIPVersions", mainMenu.accountButtons.transform.parent, new UnityEngine.Vector3(0, 0, -1f));
@@ -533,7 +507,6 @@ public static class MRIPMainMenuPatch
                     }
                     catch (System.Exception ex)
                     {
-                        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"Error displaying version {version.RawTag}: {ex.Message}"));
                     }
                 }
                 
@@ -594,11 +567,9 @@ public static class MRIPMainMenuPatch
                 }).WrapToIl2Cpp());
             }
             
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("MRIP versions screen created!"));
         }
         catch (System.Exception ex)
         {
-            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"Error creating versions screen: {ex.Message}\n{ex.StackTrace}"));
         }
     }
 }
