@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @file VersionPatch.cs
  * @brief タイトル画面とロビー画面のバージョン表示にMRIPのバージョン情報を追加
  * @details 
@@ -36,6 +36,7 @@ public static class MRIPHarmonySetUp
     {
         try
         {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Setting up Harmony patches..."));
             
             HarmonyInstance = new Harmony("MoreRolesInPolus.VersionPatch");
             
@@ -59,9 +60,11 @@ public static class MRIPHarmonySetUp
             
             HarmonyInstance.Patch(lobbyStartMethod, postfix: lobbyHarmonyMethod);
             
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Harmony patches applied successfully! (VersionShower + LobbyBehaviour)"));
         }
         catch (System.Exception ex)
         {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"Failed to setup Harmony patches: {ex.Message}\n{ex.StackTrace}"));
         }
     }
 }
@@ -84,6 +87,7 @@ public static class MRIPVersionPatch
 
         try
         {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("VersionShower.Start Postfix called."));
             UpdateVersionShowerText(__instance);
             
             // テキストが上書きされる可能性があるので、しばらく監視するコルーチンを開始
@@ -92,6 +96,7 @@ public static class MRIPVersionPatch
         }
         catch (System.Exception ex)
         {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"VersionShowerStartPostfix error: {ex.Message}\n{ex.StackTrace}"));
         }
     }
 
@@ -103,12 +108,14 @@ public static class MRIPVersionPatch
     {
         try
         {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("LobbyBehaviour.Start Postfix called, starting coroutine..."));
             
             // Nebulaのパッチでテキストが作成されるまで少し待つ必要があるのでコルーチンで処理
             __instance.StartCoroutine(FindAndUpdateLobbyVersionText().WrapToIl2Cpp());
         }
         catch (System.Exception ex)
         {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"LobbyStartPostfix error: {ex.Message}\n{ex.StackTrace}"));
         }
     }
     
@@ -129,17 +136,21 @@ public static class MRIPVersionPatch
                 {
                     versionShower.text.text = currentText + MRIPInfo.GetVersionString();
                     _updatedVersionShowers.Add(versionShower);
+                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Version text updated: {versionShower.text.text}"));
                 }
                 else if (!currentText.Contains("NoS"))
                 {
+                    NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Nebula version string not yet present. Skipping update for now."));
                 }
             }
             else
             {
+                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix("VersionShower or its text component is null."));
             }
         }
         catch (System.Exception ex)
         {
+            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Error, MRIPInfo.LogPrefix($"Error updating version text: {ex.Message}"));
         }
     }
 
@@ -155,6 +166,7 @@ public static class MRIPVersionPatch
             
             if (versionShower == null || versionShower.text == null)
             {
+                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix("Monitor: VersionShower became null."));
                 yield break;
             }
 
@@ -163,10 +175,12 @@ public static class MRIPVersionPatch
             // Nebulaが含まれているが、MRIPが含まれていない場合、再度追加
             if (currentText.Contains("NoS") && !currentText.Contains(MRIPInfo.ShortName))
             {
+                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Monitor: Version text was overwritten, re-adding (frame {i})."));
                 _updatedVersionShowers.Remove(versionShower);
                 UpdateVersionShowerText(versionShower);
             }
         }
+        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Monitor: Stopped monitoring VersionShower after 600 frames."));
     }
     
     /// <summary>
@@ -174,17 +188,18 @@ public static class MRIPVersionPatch
     /// </summary>
     private static System.Collections.IEnumerator FindAndUpdateLobbyVersionText()
     {
+        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Searching for lobby version text..."));
         
         // 最大600フレーム（約10秒）待機して監視
         for (int i = 0; i < 600; i++)
         {
             yield return null;
-
+            
             // NebulaLogoHolderを探す
             GameObject logoHolder = GameObject.Find("NebulaLogoHolder");
-
             if (logoHolder != null)
             {
+                // NebulaLogoHolder内のTextMeshProコンポーネントを検索
                 TextMeshPro[] textComponents = logoHolder.GetComponentsInChildren<TextMeshPro>();
                 foreach (var textComponent in textComponents)
                 {
@@ -199,11 +214,13 @@ public static class MRIPVersionPatch
                             {
                                 textComponent.text = currentText + MRIPInfo.GetVersionString();
                                 _updatedLobbyTexts.Add(textComponent);
+                                NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix($"Lobby version text updated: {textComponent.text}"));
                             }
                         }
                         else if (currentText.Contains("Snapshot") && currentText.Contains(MRIPInfo.ShortName))
                         {
                             // 既に更新済み
+                            NebulaPlugin.Log.Print(NebulaLog.LogLevel.Log, MRIPInfo.LogPrefix("Lobby version text already contains MRIP."));
                             yield break;
                         }
                     }
@@ -211,5 +228,6 @@ public static class MRIPVersionPatch
             }
         }
         
+        NebulaPlugin.Log.Print(NebulaLog.LogLevel.Warning, MRIPInfo.LogPrefix("Could not find lobby version text after 600 frames."));
     }
 }
