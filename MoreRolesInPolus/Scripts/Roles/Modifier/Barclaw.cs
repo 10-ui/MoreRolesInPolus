@@ -86,7 +86,7 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
             // 待機後に条件がまだ満たされていれば実行
             if (!AmOwner) yield break;
             if (nowMeeting) yield break;
-            if (myDead && !AllowGhostMeeting) yield break;
+            if ((myDead || MyPlayer.IsDead) && !AllowGhostMeeting) yield break;
 
             CallMeetingHelper.CallMeeting(MyPlayer, nowMeeting);
         }
