@@ -205,11 +205,6 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
                     buttonImpl.UseCoolDownSupport = false;
                     
                     // カスタムタイマーを作成
-                    // visualMax=maxCooldownで動的クールダウンが正しく表示される
-                    float maxCooldown = KillCooldownMaxOption;
-                    float defaultCooldown = Coordinator.CoordinateCoolDownOption;
-                    const float initialCooldown = 10f;  // ゲーム開始時は固定10秒（Among Usの標準動作）
-                    NebulaPlugin.Log.Print($"Coordinator: Initial cooldown set to {initialCooldown}s (game start)");
                     var timer = new Nebula.Modules.ScriptComponents.AdvancedTimer(initialCooldown, maxCooldown)
                         .SetDefault(maxCooldown)
                         .SetAsAbilityCoolDown()
@@ -409,7 +404,7 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
         public void OnRoomSelected(SystemTypes room, Vector2 clickedWorldPos)
         {
             NebulaPlugin.Log.Print($"Coordinator: OnRoomSelected called with room = {room}, clickedPos = ({clickedWorldPos.x}, {clickedWorldPos.y})");
-            ExecuteCoordinate(SelectedTarget, room, clickedWorldPos);
+            ExecuteCoordinate(SelectedTarget!, room, clickedWorldPos);
         }
 
         /// <summary>
@@ -460,60 +455,6 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
             
             NebulaPlugin.Log.Print($"Coordinator: Accuracy={accuracyDistance:F2}m, Range={rangeDistance:F2}m");
 
-            // キルクールダウン計算
-            // 近距離 = ペナルティ（クールダウン増加）
-            // 遠距離 = ボーナス（クールダウン減少）
-            // 正確 = ボーナス（クールダウン減少）
-            // 不正確 = ペナルティ（クールダウン増加）
-            float baseCooldown = CoordinateCoolDownOption;
-            float minCooldown = KillCooldownMinOption;
-            float maxCooldown = KillCooldownMaxOption;
-            
-            NebulaPlugin.Log.Print($"Coordinator: base={baseCooldown}, min={minCooldown}, max={maxCooldown}");
-            
-            // 計算用スケール
-            const float longRangeThreshold = 20f;   // これ以上で遠距離ボーナス最大（25->20に下げ）
-            const float shortRangeThreshold = 5f;   // これ以下で近距離ペナルティ最大
-            const float accuracyThreshold = 5f;     // これ以下で正確ボーナス最大
-            const float inaccuracyThreshold = 15f;  // これ以上で不正確ペナルティ最大
-            
-            // 距離効果（比重を重くする）
-            // 近距離（0-5m）: +10秒ペナルティ ～ 遠距離（20m+）: -17.5秒ボーナス
-            float distanceEffect;
-            if (rangeDistance < shortRangeThreshold)
-            {
-                // 近距離ペナルティ: 0m = +10秒, 5m = 0秒
-                distanceEffect = (1f - rangeDistance / shortRangeThreshold) * 10f;
-            }
-            else
-            {
-                // 遠距離ボーナス: 5m = 0秒, 20m+ = -17.5秒（12.5->17.5に増加）
-                distanceEffect = -Mathf.Min((rangeDistance - shortRangeThreshold) / (longRangeThreshold - shortRangeThreshold), 1f) * 17.5f;
-            }
-            
-            // 精度効果
-            // 正確（0-5m）: -5秒ボーナス ～ 不正確（15m+）: +7.5秒ペナルティ
-            float accuracyEffect;
-            if (accuracyDistance < accuracyThreshold)
-            {
-                // 正確ボーナス: 0m = -5秒, 5m = 0秒
-                accuracyEffect = -(1f - accuracyDistance / accuracyThreshold) * 5f;
-            }
-            else
-            {
-                // 不正確ペナルティ: 5m = 0秒, 15m+ = +7.5秒
-                accuracyEffect = Mathf.Min((accuracyDistance - accuracyThreshold) / (inaccuracyThreshold - accuracyThreshold), 1f) * 7.5f;
-            }
-            
-            // 最終計算: base + 距離効果 + 精度効果
-            float calculatedCooldown = baseCooldown + distanceEffect + accuracyEffect;
-            
-            // 範囲内に収める
-            float finalCooldown = Mathf.Clamp(calculatedCooldown, minCooldown, maxCooldown);
-            
-            NebulaPlugin.Log.Print($"Coordinator: distanceEffect={distanceEffect:F2}, accuracyEffect={accuracyEffect:F2}");
-            NebulaPlugin.Log.Print($"Coordinator: Calculated cooldown = {calculatedCooldown:F2}s, Final = {finalCooldown:F2}s");
-
             // ターゲットの現在部屋を判定
             bool isCorrect = false;
             
@@ -525,19 +466,54 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
                 }
             }
 
-            // スコア計算（精度ベース: 0m = 5000pt, 10m = 0pt）
-            const float maxScoreDistance = 10f;
-            const int maxScore = 5000;
-            int score = (int)(Mathf.Clamp01(1f - accuracyDistance / maxScoreDistance) * maxScore);
+            // スコア計算
+            // 距離スコア: 最大3000pt（遠いほど高い）
+            // マップの端から端は約40m程度を想定
+            const float maxRangeDistance = 40f;  // これ以上で距離スコア最大
+            const int maxRangeScore = 3000;
+            float rangeRatio = UnityEngine.Mathf.Clamp01(rangeDistance / maxRangeDistance);
+            int rangeScore = (int)(rangeRatio * maxRangeScore);
+
+            // 精度スコア: 最大2000pt（正確なほど高い）
+            const float maxAccuracyDistance = 10f;  // これ以上で精度スコア0
+            const int maxAccuracyScore = 2000;
+            float accuracyRatio = UnityEngine.Mathf.Clamp01(1f - accuracyDistance / maxAccuracyDistance);
+            int accuracyScore = (int)(accuracyRatio * maxAccuracyScore);
+
+            // 合計スコア（最大5000pt）
+            int score = rangeScore + accuracyScore;
+
+            // 同じ部屋ペナルティ: 自分とターゲットが同じ部屋にいる場合 -1000pt
+            bool sameRoom = false;
+            if (ShipStatus.Instance.FastRooms.TryGetValue(targetRoom, out var myRoom) && myRoom.roomArea != null)
+            {
+                if (myRoom.roomArea.OverlapPoint(myPos))
+                {
+                    sameRoom = true;
+                    score -= 1000;
+                    NebulaPlugin.Log.Print($"Coordinator: Same room penalty! -1000pt");
+                }
+            }
             
-            NebulaPlugin.Log.Print($"Coordinator: Score = {score} (accuracy = {accuracyDistance:F2}m)");
+            NebulaPlugin.Log.Print($"Coordinator: RangeScore={rangeScore}, AccuracyScore={accuracyScore}, SameRoom={sameRoom}, Total={score}");
+
+            // クールダウン計算（スコアに応じて線形補間）
+            // 5000pt = 最小クールダウン, 0pt = 最大クールダウン, 2500pt = ちょうど中間
+            float minCooldown = CooldownMinOption;
+            float maxCooldown = CooldownMaxOption;
+            float scoreRatio = score / 5000f;  // 0.0 ~ 1.0
+            
+            // 高スコア(1.0) = minCooldown, 低スコア(0.0) = maxCooldown
+            float cooldown = UnityEngine.Mathf.Lerp(maxCooldown, minCooldown, scoreRatio);
+            
+            NebulaPlugin.Log.Print($"Coordinator: Cooldown = {cooldown:F1}s (min={minCooldown}, max={maxCooldown}, score={score})");
 
             if (isCorrect)
             {
-                NebulaPlugin.Log.Print($"Coordinator: Guess CORRECT! Killing {target.Name} with cooldown {finalCooldown:F2}s");
+                NebulaPlugin.Log.Print($"Coordinator: Guess CORRECT! Adding {score} points.");
 
-                // 正解：ターゲットをキル (RemoteKill)
-                MyPlayer.MurderPlayer(target, PlayerState.Dead, EventDetail.Kill, KillParameter.RemoteKill, KillCondition.BothAlive);
+                // 正解：スコアを加算
+                TotalScore += score;
 
                 // スコア表示（緑色）+ フラッシュ
                 var currentGame = NebulaAPI.CurrentGame;
@@ -551,27 +527,18 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
                 }
                 Nebula.Utilities.AmongUsUtil.PlayCustomFlash(new Color(0.2f, 1f, 0.4f), 0f, 0.5f, 0.4f, 0f);
 
-                // キル処理後にクールダウンを設定（遅延させることでMurderPlayerの内部リセットを回避）
-                float cooldownToSet = finalCooldown;
-                NebulaManager.Instance.ScheduleDelayAction(() =>
+                // 勝利判定
+                if (TotalScore >= PointsToWin)
                 {
-                    if (CoordinateButton?.CoolDownTimer is Nebula.Modules.ScriptComponents.AdvancedTimer timerCorrect)
-                    {
-                        timerCorrect.SetVisualMax(cooldownToSet);
-                        timerCorrect.Start(new float?(cooldownToSet));
-                        NebulaPlugin.Log.Print($"Coordinator: Timer started with {cooldownToSet}s (delayed)");
-                    }
-                });
-
-                // キル音を再生 (自分のみ)
-                if (PlayerControl.LocalPlayer != null)
-                {
-                    SoundManager.Instance.PlaySound(PlayerControl.LocalPlayer.KillSfx, false, 0.8f);
+                    NebulaPlugin.Log.Print($"Coordinator: WIN! Total score {TotalScore} >= {PointsToWin}");
+                    var bitmask = BitMasks.AsPlayer();
+                    bitmask.Add(MyPlayer);
+                    NebulaAPI.CurrentGame?.RequestGameEnd(CoordinatorTeamInfo.End, bitmask);
                 }
             }
             else
             {
-                NebulaPlugin.Log.Print($"Coordinator: Guess WRONG! Target {target.Name} is not in {targetRoom}. Cooldown = {finalCooldown:F2}s");
+                NebulaPlugin.Log.Print($"Coordinator: Guess WRONG! Target {target.Name} is not in {targetRoom}.");
                 
                 // スコア表示（赤色）+ フラッシュ
                 var currentGame = NebulaAPI.CurrentGame;
@@ -587,19 +554,19 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
                 
                 // 不正解：ターゲットに通知（通知がペナルティ）
                 CoordinatorHelpers.RpcHolder.RpcNotifyTarget.Invoke(target.PlayerId);
-                
-                // 遅延させてクールダウンを設定
-                float cooldownToSetWrong = finalCooldown;
-                NebulaManager.Instance.ScheduleDelayAction(() =>
-                {
-                    if (CoordinateButton?.CoolDownTimer is Nebula.Modules.ScriptComponents.AdvancedTimer timerWrong)
-                    {
-                        timerWrong.SetVisualMax(cooldownToSetWrong);
-                        timerWrong.Start(new float?(cooldownToSetWrong));
-                        NebulaPlugin.Log.Print($"Coordinator: Timer started with {cooldownToSetWrong}s (delayed)");
-                    }
-                });
             }
+
+            // クールダウンを設定
+            NebulaManager.Instance.ScheduleDelayAction(() =>
+            {
+                if (CoordinateButton?.CoolDownTimer is Nebula.Modules.ScriptComponents.AdvancedTimer timer)
+                {
+                    // ビジュアル用の最大値も更新してからスタート
+                    timer.SetDefault(cooldown);
+                    timer.Start(new float?(cooldown));
+                    NebulaPlugin.Log.Print($"Coordinator: Timer started with {cooldown}s (visual max updated)");
+                }
+            });
 
             // 画面を閉じる
             CloseAllScreens();
@@ -660,7 +627,7 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
                 float maxCooldown = CooldownMaxOption;
                 float cooldown = (minCooldown + maxCooldown) / 2f;
                 timer.Start(new float?(cooldown));
-                NebulaPlugin.Log.Print($"Coordinator: Cooldown reset after meeting to {cooldown}s");
+                NebulaPlugin.Log.Print($"Coordinator: Cooldown reset after meeting to {cooldown}s (mid of {minCooldown}~{maxCooldown})");
             }
         }
 
