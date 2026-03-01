@@ -47,11 +47,8 @@ public class CoordinatorHelpers
         public static readonly RemoteProcess<(byte playerId, int score, int pointsToWin)> RpcShareScore = 
             new RemoteProcess<(byte playerId, int score, int pointsToWin)>("Coordinator.ShareScore", (data, _) =>
         {
-            NebulaPlugin.Log.Print($"Coordinator.ShareScore received: score={data.score}/{data.pointsToWin}");
-
             if (!MeetingHud.Instance)
             {
-                NebulaPlugin.Log.Print("Coordinator.ShareScore: MeetingHud.Instance is null, aborting");
                 return;
             }
 
@@ -72,8 +69,6 @@ public class CoordinatorHelpers
             
             // MeetingHudExtensionを使って左上に追加
             MeetingHudExtension.AddLeftContent(textObj);
-            
-            NebulaPlugin.Log.Print($"Coordinator.ShareScore: Text added to left content");
         });
     }
 }

@@ -186,12 +186,10 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
                 if (OverrideInitialCooldownOption)
                 {
                     initialCooldown = InitialCooldownOption;
-                    NebulaPlugin.Log.Print($"Coordinator: Initial cooldown set to {initialCooldown}s (overridden)");
                 }
                 else
                 {
                     initialCooldown = (minCooldown + maxCooldown) / 2f;
-                    NebulaPlugin.Log.Print($"Coordinator: Initial cooldown set to {initialCooldown}s (mid of {minCooldown}~{maxCooldown})");
                 }
                 
                 CoordinateButton = NebulaAPI.Modules.AbilityButton(this, MyPlayer, Virial.Compat.VirtualKeyInput.Ability,
@@ -403,7 +401,6 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
         /// <param name="clickedWorldPos">クリックしたワールド座標</param>
         public void OnRoomSelected(SystemTypes room, Vector2 clickedWorldPos)
         {
-            NebulaPlugin.Log.Print($"Coordinator: OnRoomSelected called with room = {room}, clickedPos = ({clickedWorldPos.x}, {clickedWorldPos.y})");
             ExecuteCoordinate(SelectedTarget!, room, clickedWorldPos);
         }
 
@@ -453,7 +450,8 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
             Vector2 myPos = MyPlayer.TruePosition;
             float rangeDistance = Vector2.Distance(myPos, targetPos);
             
-            NebulaPlugin.Log.Print($"Coordinator: Accuracy={accuracyDistance:F2}m, Range={rangeDistance:F2}m");
+
+            
 
             // ターゲットの現在部屋を判定
             bool isCorrect = false;
@@ -491,12 +489,9 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
                 {
                     sameRoom = true;
                     score -= 1000;
-                    NebulaPlugin.Log.Print($"Coordinator: Same room penalty! -1000pt");
                 }
             }
             
-            NebulaPlugin.Log.Print($"Coordinator: RangeScore={rangeScore}, AccuracyScore={accuracyScore}, SameRoom={sameRoom}, Total={score}");
-
             // クールダウン計算（スコアに応じて線形補間）
             // 5000pt = 最小クールダウン, 0pt = 最大クールダウン, 2500pt = ちょうど中間
             float minCooldown = CooldownMinOption;
@@ -506,15 +501,12 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
             // 高スコア(1.0) = minCooldown, 低スコア(0.0) = maxCooldown
             float cooldown = UnityEngine.Mathf.Lerp(maxCooldown, minCooldown, scoreRatio);
             
-            NebulaPlugin.Log.Print($"Coordinator: Cooldown = {cooldown:F1}s (min={minCooldown}, max={maxCooldown}, score={score})");
 
+            
             if (isCorrect)
             {
-                NebulaPlugin.Log.Print($"Coordinator: Guess CORRECT! Adding {score} points.");
-
                 // 正解：スコアを加算
                 TotalScore += score;
-
                 // スコア表示（緑色）+ フラッシュ
                 var currentGame = NebulaAPI.CurrentGame;
                 if (currentGame != null)
@@ -530,7 +522,6 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
                 // 勝利判定
                 if (TotalScore >= PointsToWin)
                 {
-                    NebulaPlugin.Log.Print($"Coordinator: WIN! Total score {TotalScore} >= {PointsToWin}");
                     var bitmask = BitMasks.AsPlayer();
                     bitmask.Add(MyPlayer);
                     NebulaAPI.CurrentGame?.RequestGameEnd(CoordinatorTeamInfo.End, bitmask);
@@ -538,8 +529,6 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
             }
             else
             {
-                NebulaPlugin.Log.Print($"Coordinator: Guess WRONG! Target {target.Name} is not in {targetRoom}.");
-                
                 // スコア表示（赤色）+ フラッシュ
                 var currentGame = NebulaAPI.CurrentGame;
                 if (currentGame != null)
@@ -564,7 +553,6 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
                     // ビジュアル用の最大値も更新してからスタート
                     timer.SetDefault(cooldown);
                     timer.Start(new float?(cooldown));
-                    NebulaPlugin.Log.Print($"Coordinator: Timer started with {cooldown}s (visual max updated)");
                 }
             });
 
@@ -610,7 +598,6 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
             {
                 LastNotifiedThreshold = currentThreshold;
                 CoordinatorHelpers.RpcHolder.RpcShareScore.Invoke((MyPlayer.PlayerId, TotalScore, PointsToWin));
-                NebulaPlugin.Log.Print($"Coordinator: Score shared at {progress * 100:F0}% (threshold {currentThreshold})");
             }
         }
 
@@ -627,7 +614,6 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
                 float maxCooldown = CooldownMaxOption;
                 float cooldown = (minCooldown + maxCooldown) / 2f;
                 timer.Start(new float?(cooldown));
-                NebulaPlugin.Log.Print($"Coordinator: Cooldown reset after meeting to {cooldown}s (mid of {minCooldown}~{maxCooldown})");
             }
         }
 
