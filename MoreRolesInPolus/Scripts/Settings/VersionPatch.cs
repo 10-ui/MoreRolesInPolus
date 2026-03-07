@@ -13,6 +13,7 @@ using HarmonyLib;
 using Nebula.Modules;
 using Nebula.Utilities;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Virial.Runtime;
 using UnityEngine;
 using TMPro; // TextMeshProのために必要
@@ -73,6 +74,22 @@ public static class MRIPVersionPatch
 {
     private static readonly HashSet<VersionShower> _updatedVersionShowers = new();
     private static readonly HashSet<TextMeshPro> _updatedLobbyTexts = new();
+    
+    /// <summary>
+    /// 安定版（例: "v3.1"）のバージョン表記パターン
+    /// </summary>
+    private static readonly Regex StableVersionPattern = new(@"v\d+\.\d+", RegexOptions.Compiled);
+    
+    /// <summary>
+    /// テキストがNebulaのバージョンテキストかどうかを判定する
+    /// スナップショット版（"Snapshot"を含む）または安定版（"v3.1"等のパターン）を検出
+    /// </summary>
+    /// <param name="text">判定対象のテキスト</param>
+    /// <returns>バージョンテキストの場合true</returns>
+    private static bool IsVersionText(string text)
+    {
+        return text.Contains("Snapshot") || StableVersionPattern.IsMatch(text);
+    }
     
     /// <summary>
     /// VersionShower.Start実行後に呼ばれるPostfixパッチ（タイトル画面）
@@ -192,8 +209,8 @@ public static class MRIPVersionPatch
                     {
                         string currentText = textComponent.text;
                         
-                        // バージョンテキスト（Snapshotを含むテキスト）を特定
-                        if (currentText.Contains("Snapshot") && !currentText.Contains(MRIPInfo.ShortName))
+                        // バージョンテキスト（Snapshot版 or 安定版 "v3.1" 等）を特定
+                        if (IsVersionText(currentText) && !currentText.Contains(MRIPInfo.ShortName))
                         {
                             if (!_updatedLobbyTexts.Contains(textComponent))
                             {
@@ -201,7 +218,7 @@ public static class MRIPVersionPatch
                                 _updatedLobbyTexts.Add(textComponent);
                             }
                         }
-                        else if (currentText.Contains("Snapshot") && currentText.Contains(MRIPInfo.ShortName))
+                        else if (IsVersionText(currentText) && currentText.Contains(MRIPInfo.ShortName))
                         {
                             // 既に更新済み
                             yield break;
