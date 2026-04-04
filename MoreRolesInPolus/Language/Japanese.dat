@@ -44,6 +44,20 @@
 "achievement.researcher.challenge.splitted.1" : "深淵に"
 "achievement.researcher.challenge.splitted.3" : "行方は、、、"
 
+## Linker - Crewmate
+"role.linker.name" : "リンカー"
+"role.linker.short" : "リン"
+"role.linker.blurb" : "繋ぐのは絆か、それとも運命か"
+"options.role.linker.linkCooldown" : "縁結びクールダウン"
+"options.role.linker.doActionFlash" : "すべてのフラッシュを発動させる"
+"options.role.linker.doTaskFlash" : "タスク完了フラッシュ"
+"options.role.linker.doKillFlash" : "キル実行フラッシュ"
+"options.role.linker.doKilledFlash" : "キル被害フラッシュ"
+"options.role.linker.doDoorOpenFlash" : "ドア開閉フラッシュ"
+"options.role.linker.doVentFlash" : "ベント進入フラッシュ"
+"options.role.linker.doGameActionFlash" : "ゲームアクションフラッシュ"
+"options.role.linker.followUpSuicide" : "リンク先が死んだ場合、後追い死をするか"
+
 ## Coordinator - Impostor
 "role.coordinator.name" : "コーディネーター"
 "role.coordinator.short" : "コー"
