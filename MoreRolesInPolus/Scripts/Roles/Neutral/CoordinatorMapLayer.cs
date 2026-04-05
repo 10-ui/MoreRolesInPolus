@@ -16,15 +16,17 @@ using Nebula.Map;
 using Nebula.Extensions;
 using Il2CppInterop.Runtime.Injection;
 using BepInEx.Unity.IL2CPP.Utils;
+using Nebula.Roles.MapLayer;
 
 using Vector2 = UnityEngine.Vector2;
 using Vector3 = UnityEngine.Vector3;
 using Color = UnityEngine.Color;
 
-namespace MoreRolesInPolus.Roles.Imposter
+namespace MoreRolesInPolus.Roles.Neutral
 {
     /// <summary>
     /// Coordinatorコールバック用インターフェース (IL2CPP互換)
+    /// Coordinator.Instance クラスで実装される
     /// </summary>
     public interface ICoordinatorMapCallback
     {
@@ -120,9 +122,13 @@ namespace MoreRolesInPolus.Roles.Imposter
             // ターゲットマーカー（クリック時に表示）を作成
             targetMarker = UnityHelper.CreateObject<SpriteRenderer>("TargetMarker", transform, new Vector3(0f, 0f, -22f), null);
             targetMarker.sprite = MapBehaviour.Instance.HerePoint.sprite;
-            targetMarker.color = new Color(1f, 0f, 0f, 0.8f); // 赤色ターゲット
+            targetMarker.color = new Color(229f / 255f, 151f / 255f, 150f / 255f, 0.8f); // Coordinator色
             targetMarker.transform.localScale = Vector3.one * 1.2f;
             targetMarker.enabled = false;
+
+            // Doppelgangerと同じShowPlayersMapLayer方式でプレイヤーアイコンを描画
+            gameObject.AddComponent<ShowPlayersMapLayer>()
+                .SetUp(_ => true, null);
             
             UnityEngine.Debug.Log("CoordinatorMapLayer: Awake completed successfully");
         }
@@ -143,8 +149,10 @@ namespace MoreRolesInPolus.Roles.Imposter
             worldPosOnMinimap.z = -25f;
             dotRenderer.transform.localPosition = worldPosOnMinimap;
 
-            // ドットは常に緑表示（壁判定のみなので制限なし）
-            dotRenderer.color = Color.green;
+            // マップ領域内かつ部屋の中なら緑、それ以外は赤
+            bool isValidArea = Nebula.Map.MapData.GetCurrentMapData().CheckMapArea(worldPos, 0.2f);
+            bool isInsideRoom = GetRoomAtPosition(worldPos) != SystemTypes.Hallway;
+            dotRenderer.color = (isValidArea && isInsideRoom) ? Color.green : Color.red;
         }
 
         /// <summary>
@@ -164,10 +172,17 @@ namespace MoreRolesInPolus.Roles.Imposter
                 return;
             }
 
-            UnityEngine.Debug.Log($"CoordinatorMapLayer: OnClick at world({worldPos.x}, {worldPos.y})");
-
             // クリック位置から部屋を判定
             SystemTypes selectedRoom = GetRoomAtPosition(worldPos);
+
+            // 部屋の外（Hallway扱い）のクリックは無視
+            if (selectedRoom == SystemTypes.Hallway)
+            {
+                UnityEngine.Debug.Log("CoordinatorMapLayer: Click ignored (outside room)");
+                return;
+            }
+
+            UnityEngine.Debug.Log($"CoordinatorMapLayer: OnClick at world({worldPos.x}, {worldPos.y})");
             
             UnityEngine.Debug.Log($"CoordinatorMapLayer: Selected room = {selectedRoom}");
 
@@ -195,7 +210,7 @@ namespace MoreRolesInPolus.Roles.Imposter
             yield return new WaitForSeconds(0.15f);
 
             // 元に戻す
-            targetMarker.color = new Color(1f, 0f, 0f, 0.8f);
+            targetMarker.color = new Color(229f / 255f, 151f / 255f, 150f / 255f, 0.8f);
             targetMarker.transform.localScale = Vector3.one * 1.2f;
         }
 
@@ -237,4 +252,5 @@ namespace MoreRolesInPolus.Roles.Imposter
             }
         }
     }
+
 }

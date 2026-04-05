@@ -63,7 +63,7 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
                 numOfKillCount++;
                 deadPlayer.Add(ev.Dead);
 
-                if (numOfKillCount == numOfDeadRequired && !myDead && numOfMaxButton >= numOfButtonCount)
+                if (numOfKillCount == numOfDeadRequired && !myDead && numOfMaxButton > numOfButtonCount)
                 {
                     if(enableAfterSecondTurn && nowTurn < 2) return;
    
