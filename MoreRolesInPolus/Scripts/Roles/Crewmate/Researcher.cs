@@ -40,10 +40,17 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
     static private readonly Image trackSprite = NebulaAPI.AddonAsset.GetResource("Crewmate/Researcher/TrackButton.png")!.AsImage(115f)!;
 
 
-    public override Ability CreateAbility(GamePlayer player, int[] arguments) => new(player, arguments.GetAsBool(0), arguments.Get(1, -1));
+    public override Ability CreateAbility(GamePlayer player, int[] arguments)
+    {
+        int maxSurveyValue = MaxSurveyOption.GetValue();
+        int defaultUses = maxSurveyValue == 0 ? 1000 : maxSurveyValue;
+        return new(player, arguments.GetAsBool(0), arguments.Get(1, defaultUses));
+    }
 
     public class Ability : AbstractPlayerUsurpableAbility, IPlayerAbility
     {
+        int[] IPlayerAbility.AbilityArguments => [IsUsurped.AsInt(), leftUses];
+
         private record ActionHistory(float Time, GamePlayer Player, string Text);
         private List<ActionHistory> allActions = [];
 
@@ -96,8 +103,15 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
 
         public Ability(GamePlayer player, bool isUsurped, int leftUses) : base(player, isUsurped)
         {
-            this.leftUses = leftUses;
-            this.leftUses = MaxSurveyOption == 0 ? 1000 : MaxSurveyOption;
+            if (leftUses < 0)
+            {
+                int MaxSurveyValue = MaxSurveyOption.GetValue();
+                this.leftUses = MaxSurveyValue == 0 ? 1000 : MaxSurveyValue;
+            }
+            else
+            {
+                this.leftUses = leftUses;
+            }
 
             if (AmOwner)
             {
