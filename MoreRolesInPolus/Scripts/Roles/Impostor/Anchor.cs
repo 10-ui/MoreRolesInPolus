@@ -112,6 +112,12 @@ namespace MoreRolesInPolus.Roles.Imposter
                 MyRenderer.gameObject.SetActive(false);
                 vent.gameObject.SetActive(true);
             }
+
+            public void HideBeforeActivation()
+            {
+                if (MyRenderer != null) MyRenderer.gameObject.SetActive(false);
+                if (vent != null) vent.gameObject.SetActive(false);
+            }
             int currentIndex = 0;
             const int maxIndex = 18;
             public System.Collections.IEnumerator StartAnimation()
@@ -157,7 +163,22 @@ namespace MoreRolesInPolus.Roles.Imposter
         /// <param name="player">割り当てる対象のプレイヤー</param>
         /// <param name="arguments">役職の引数(役職の状態を引き継ぐために使用します。)</param>
         /// <returns></returns>
-        public override Ability CreateAbility(GamePlayer player, int[] arguments) => new(player, arguments.GetAsBool(0));
+        public override Ability CreateAbility(GamePlayer player, int[] arguments)
+        {
+            bool isUsurped = arguments.GetAsBool(0);
+            int leftJacks = arguments.Get(1, numOfJacksOption);
+            bool isJackActivated = arguments.GetAsBool(2);
+            int jackIdCount = arguments.Get(3, 0);
+            int[] jackObjectIds = arguments.Skip(4).Take(jackIdCount).ToArray();
+
+            // 異常引数時の保険: 通常配布なのに残数0になっていたら初期値に戻す
+            if (!isJackActivated && jackObjectIds.Length == 0 && leftJacks <= 0)
+            {
+                leftJacks = numOfJacksOption;
+            }
+
+            return new(player, isUsurped, leftJacks, isJackActivated, jackObjectIds);
+        }
 
         public static readonly RemoteProcess<int> RpcPlayJackVentAnimation = new("RpcPlayJackVentAnimation", (m, _) =>
         {
@@ -166,6 +187,39 @@ namespace MoreRolesInPolus.Roles.Imposter
             {
                 NebulaManager.Instance.StartCoroutine(obj.StartAnimation().WrapToIl2Cpp());
             }
+        });
+
+        public static readonly RemoteProcess<int> RpcHideJackBeforeActivation = new("RpcHideJackBeforeActivation", (m, _) =>
+        {
+            var obj = NebulaSyncObject.GetObject<Jack>(m);
+            if (obj != null)
+            {
+                obj.HideBeforeActivation();
+            }
+        });
+
+        public static readonly RemoteProcess<int[]> RpcActivateJacks = new("RpcActivateJacks", (objectIds, _) =>
+        {
+            var globalJacks = objectIds
+                .Select(NebulaSyncObject.GetObject<Jack>)
+                .Where(jack => jack != null)
+                .Cast<Jack>()
+                .ToList();
+
+            if (globalJacks.Count == 0) return;
+
+            globalJacks.Do(jack => jack.ConvertToVent());
+
+            for (int c = 0; c < globalJacks.Count - 1; c++)
+            {
+                Jack jack1 = globalJacks[c];
+                Jack jack2 = globalJacks[c + 1];
+                jack1.vent.Right = jack2.vent;
+                jack2.vent.Left = jack1.vent;
+            }
+
+            globalJacks.First().vent.Left = globalJacks.Last().vent;
+            globalJacks.Last().vent.Right = globalJacks.First().vent;
         });
 
         /// <summary>
@@ -179,7 +233,33 @@ namespace MoreRolesInPolus.Roles.Imposter
             static private readonly Image moveLeftSprite = NebulaAPI.AddonAsset.GetResource("Impostor/Anchor/ButtonLeft.png")!.AsImage(115f)!;
 
             private List<Jack> globalJacks = null!;
-            List<Jack> localJacks = new List<Jack>();
+            private List<Jack> localJacks = new List<Jack>();
+            private int leftJacks;
+            private bool isJackActivated;
+            private readonly List<int> pendingJackObjectIds = new();
+
+            int[] IPlayerAbility.AbilityArguments
+            {
+                get
+                {
+                    TryRestoreJacksFromPendingIds();
+
+                    List<int> jackObjectIds = pendingJackObjectIds.Count > 0
+                        ? [.. pendingJackObjectIds]
+                        : isJackActivated
+                            ? globalJacks?.Select(jack => jack.ObjectId).ToList() ?? []
+                            : localJacks.Select(jack => jack.ObjectId).ToList();
+
+                    return
+                    [
+                        IsUsurped.AsInt(),
+                        leftJacks,
+                        isJackActivated.AsInt(),
+                        jackObjectIds.Count,
+                        ..jackObjectIds
+                    ];
+                }
+            }
 
             /// <summary>
             /// カメラモード中かどうかのフラグ
@@ -196,18 +276,35 @@ namespace MoreRolesInPolus.Roles.Imposter
             /// </summary>
             /// <param name="player">割り当て対象のプレイヤー</param>
             /// <param name="isUsurped">能力が簒奪されている場合、true</param>
-            public Ability(GamePlayer player, bool isUsurped) : base(player, isUsurped)
+            public Ability(GamePlayer player, bool isUsurped, int initialLeftJacks, bool isJackActivated, int[] jackObjectIds) : base(player, isUsurped)
             {
+                this.leftJacks = initialLeftJacks;
+                this.isJackActivated = isJackActivated;
+                pendingJackObjectIds.AddRange(jackObjectIds);
+                TryRestoreJacksFromPendingIds();
+
                 if (AmOwner)
                 {
-                    int left = numOfJacksOption;
+                    // チェインシフト直後など、他クライアントでオブジェクト生成が遅れるケースに備えて
+                    // 保留中IDの復元を定期的に再試行する。
+                    GameOperatorManager.Instance.Subscribe<GameUpdateEvent>(_ =>
+                    {
+                        TryRestoreJacksFromPendingIds();
+                    }, this);
 
                     var placeButton = NebulaAPI.Modules.AbilityButton(this, MyPlayer, Virial.Compat.VirtualKeyInput.Ability,
-                        placeCoolDownOption, "place", placeSprite, null, _ => globalJacks == null && left > 0)
+                        placeCoolDownOption, "place", placeSprite, null, _ =>
+                        {
+                            TryRestoreJacksFromPendingIds();
+                            return globalJacks == null && this.leftJacks > 0;
+                        })
                         .SetAsUsurpableButton(this);
 
                     placeButton.OnClick = (button) =>
                     {
+                        TryRestoreJacksFromPendingIds();
+                        if (this.leftJacks <= 0) return;
+
                         // 1. プレイヤーの現在の「確実に安全な」足元位置
                         UnityEngine.Vector2 playerPos = (UnityEngine.Vector2)PlayerControl.LocalPlayer.GetTruePosition();
                         UnityEngine.Vector2 finalPos = playerPos;
@@ -243,12 +340,12 @@ namespace MoreRolesInPolus.Roles.Imposter
                         var obj = NebulaSyncObject.LocalInstantiate(Jack.MyLocalTag, new float[] { finalPos.x, finalPos.y });
                         localJacks.Add((obj.SyncObject as Jack)!);
 
-                        left--;
-                        placeButton.UpdateUsesIcon(left.ToString());
+                        leftJacks--;
+                        placeButton.UpdateUsesIcon(leftJacks.ToString());
                         placeButton.StartCoolDown();
                     };
 
-                    placeButton.ShowUsesIcon(2, left.ToString());
+                    placeButton.ShowUsesIcon(2, this.leftJacks.ToString());
 
                     /// <summary>
                     /// 現在表示中のカメラインデックス
@@ -267,7 +364,11 @@ namespace MoreRolesInPolus.Roles.Imposter
                     bool originalShadowQuadActive = true;
 
                     var cameraButton = NebulaAPI.Modules.EffectButton(this, MyPlayer, Virial.Compat.VirtualKeyInput.SecondaryAbility,
-                    cameraCoolDownOption, cameraDurationOption, "camera", cameraSprite, null, _ => globalJacks != null && globalJacks.Count > 0)
+                    cameraCoolDownOption, cameraDurationOption, "camera", cameraSprite, null, _ =>
+                    {
+                        TryRestoreJacksFromPendingIds();
+                        return globalJacks != null && globalJacks.Count > 0;
+                    })
                     .SetAsUsurpableButton(this);
 
                     // カメラモード中（視点移動中）でもボタンを使用可能にする
@@ -301,6 +402,7 @@ namespace MoreRolesInPolus.Roles.Imposter
                     /// </summary>
                     void StartCameraMode()
                     {
+                        TryRestoreJacksFromPendingIds();
                         if (globalJacks == null || globalJacks.Count == 0) return;
 
                         isInCameraMode = true;
@@ -505,7 +607,8 @@ namespace MoreRolesInPolus.Roles.Imposter
                     {
                         if (ev.Player.AmOwner)
                         {
-                            Jack targetVent = localJacks.FirstOrDefault(obj => ev.Vent.Id == obj.vent.Id);
+                            var currentJacks = globalJacks ?? localJacks;
+                            Jack targetVent = currentJacks.FirstOrDefault(obj => ev.Vent.Id == obj.vent.Id);
                             if (targetVent != null)
                             {
                                 RpcPlayJackVentAnimation.Invoke(targetVent.ObjectId);
@@ -516,7 +619,8 @@ namespace MoreRolesInPolus.Roles.Imposter
                     {
                         if (ev.Player.AmOwner)
                         {
-                            Jack? targetVent = localJacks.FirstOrDefault(obj => ev.Vent.Id == obj.vent.Id);
+                            var currentJacks = globalJacks ?? localJacks;
+                            Jack? targetVent = currentJacks.FirstOrDefault(obj => ev.Vent.Id == obj.vent.Id);
                             if (targetVent != null)
                             {
                                 RpcPlayJackVentAnimation.Invoke(targetVent.ObjectId);
@@ -525,9 +629,19 @@ namespace MoreRolesInPolus.Roles.Imposter
                     }, this);
                     GameOperatorManager.Instance.RegisterOnReleased(() =>
                     {
+                        TryRestoreJacksFromPendingIds();
+
+                        // チェインシフト等で役職を失う時点で、設置済みローカルJackは
+                        // 「継承可能なグローバル同期オブジェクト」に昇格しておく。
+                        if (!isJackActivated && localJacks.Count > 0)
+                        {
+                            PromoteLocalJacksForInheritance();
+                        }
+
                         if (PlayerControl.LocalPlayer.inVent)
                         {
-                            Jack? targetVent = localJacks.FirstOrDefault(obj => Vent.currentVent == obj.vent);
+                            var currentJacks = globalJacks ?? localJacks;
+                            Jack? targetVent = currentJacks.FirstOrDefault(obj => Vent.currentVent == obj.vent);
                             if (targetVent != null)
                             {
                                 PlayerControl.LocalPlayer.MyPhysics.RpcExitVent(targetVent.vent.Id);
@@ -564,33 +678,55 @@ namespace MoreRolesInPolus.Roles.Imposter
             /// <param name="ev"></param>
             void OnMeetingStart(MeetingStartEvent ev)
             {
-                if (MyPlayer.AmOwner && localJacks != null && localJacks.Count == numOfJacksOption)
+                TryRestoreJacksFromPendingIds();
+                if (MyPlayer.AmOwner && !isJackActivated && leftJacks <= 0 && localJacks != null && localJacks.Count > 0)
                 {
-                    // ローカルリストの要素をそのままグローバルリストとして扱う
-                    globalJacks = localJacks;
-
-                    globalJacks.Do(jack =>
-                    {
-                        jack.ReflectInstantiationGlobally();
-                        // Ventへ変換する
-                        jack.ConvertToVent();
-                    });
-
-                    // 2. Ventのリンクを設定する
-                    for (int c = 0; c < globalJacks.Count - 1; c++)
-                    {
-                        Jack jack1 = globalJacks[c];
-                        Jack jack2 = globalJacks[c + 1];
-                        jack1.vent.Right = jack2.vent;
-                        jack2.vent.Left = jack1.vent;
-                    }
-
-                    // 輪っか状に接続
-                    globalJacks.First().vent.Left = globalJacks.Last().vent;
-                    globalJacks.Last().vent.Right = globalJacks.First().vent;
+                    ConvertLocalJacksToGlobalVents();
                 }
 
                 //// ローカルJackのリストはグローバル化したのでクリア
+            }
+
+            private void TryRestoreJacksFromPendingIds()
+            {
+                if (pendingJackObjectIds.Count == 0) return;
+
+                List<Jack> restoredJacks = [];
+                foreach (int objectId in pendingJackObjectIds)
+                {
+                    Jack? restoredJack = NebulaSyncObject.GetObject<Jack>(objectId);
+                    if (restoredJack == null) return;
+                    restoredJacks.Add(restoredJack);
+                }
+
+                if (isJackActivated) globalJacks = restoredJacks;
+                else localJacks = restoredJacks;
+                pendingJackObjectIds.Clear();
+            }
+
+            private void PromoteLocalJacksForInheritance()
+            {
+                if (localJacks == null || localJacks.Count == 0) return;
+
+                foreach (var jack in localJacks)
+                {
+                    jack.ReflectInstantiationGlobally();
+                    jack.HideBeforeActivation();
+                    RpcHideJackBeforeActivation.Invoke(jack.ObjectId);
+                }
+            }
+
+            private void ConvertLocalJacksToGlobalVents()
+            {
+                if (isJackActivated) return;
+                if (localJacks == null || localJacks.Count == 0) return;
+
+                // ローカルリストの要素をそのままグローバルリストとして扱う
+                globalJacks = localJacks;
+
+                globalJacks.Do(jack => jack.ReflectInstantiationGlobally());
+                RpcActivateJacks.Invoke(globalJacks.Select(jack => jack.ObjectId).ToArray());
+                isJackActivated = true;
             }
 
         }
