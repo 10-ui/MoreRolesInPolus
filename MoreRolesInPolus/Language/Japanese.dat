@@ -68,6 +68,8 @@
 "coordinator.selectRoom" : "部屋を選択"
 "coordinator.notification.failed" : "見られている気がしたが、気のせいだったようだ..."
 "role.coordinator.taskText" : "[Coordinator] %SCORE%/%GOAL% pt"
+"role.coordinator.area.polus.outside.ejection" : "屋外（オフィス右溶岩）"
+"role.coordinator.area.polus.outside.comms" : "屋外（通信室左外）"
 "end.coordinator" : "コーディネーター%EXTRA%勝利"
 
 ### junjun Made

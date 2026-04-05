@@ -16,6 +16,7 @@ using Nebula.Map;
 using Nebula.Extensions;
 using Il2CppInterop.Runtime.Injection;
 using BepInEx.Unity.IL2CPP.Utils;
+using Nebula.Roles.MapLayer;
 
 using Vector2 = UnityEngine.Vector2;
 using Vector3 = UnityEngine.Vector3;
@@ -124,6 +125,10 @@ namespace MoreRolesInPolus.Roles.Neutral
             targetMarker.color = new Color(229f / 255f, 151f / 255f, 150f / 255f, 0.8f); // Coordinator色
             targetMarker.transform.localScale = Vector3.one * 1.2f;
             targetMarker.enabled = false;
+
+            // Doppelgangerと同じShowPlayersMapLayer方式でプレイヤーアイコンを描画
+            gameObject.AddComponent<ShowPlayersMapLayer>()
+                .SetUp(_ => true, null);
             
             UnityEngine.Debug.Log("CoordinatorMapLayer: Awake completed successfully");
         }
@@ -247,4 +252,5 @@ namespace MoreRolesInPolus.Roles.Neutral
             }
         }
     }
+
 }
