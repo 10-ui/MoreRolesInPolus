@@ -48,45 +48,20 @@ internal class CoordinatorTeamInfo
 /// </summary>
 internal class Coordinator : DefinedRoleTemplate, DefinedRole
 {
-    /// <summary>
-    /// 座標特定クールダウン（最小値）5000pt時に適用
-    /// </summary>
     static private readonly FloatConfiguration CooldownMinOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.cooldownMin", (2.5f, 30f, 2.5f), 10f, FloatConfigurationDecorator.Second);
     
-    /// <summary>
-    /// 座標特定クールダウン（最大値）0pt時に適用
-    /// </summary>
     static private readonly FloatConfiguration CooldownMaxOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.cooldownMax", (10f, 60f, 5f), 40f, FloatConfigurationDecorator.Second);
     
-    /// <summary>
-    /// 初期クールダウンを上書きするか
-    /// </summary>
     static private readonly BoolConfiguration OverrideInitialCooldownOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.overrideInitialCooldown", false);
     
-    /// <summary>
-    /// 初期クールダウン（上書き有効時）
-    /// </summary>
     static private readonly FloatConfiguration InitialCooldownOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.initialCooldown", (5f, 60f, 2.5f), 15f, FloatConfigurationDecorator.Second, () => OverrideInitialCooldownOption);
     
-    /// <summary>
-    /// 勝利に必要なポイント倍率（5000ベース）
-    /// x1=5000, x2=10000, x4=20000, x6=30000
-    /// </summary>
     static private readonly IntegerConfiguration PointsMultiplierOption = NebulaAPI.Configurations.Configuration("options.role.coordinator.pointsMultiplier", (1, 8), 4);
 
-    /// <summary>
-    /// 勝利に必要なポイント数を計算
-    /// </summary>
     public static int PointsToWin => PointsMultiplierOption * 5000;
 
-    /// <summary>
-    /// 役職の情報を用意します。
-    /// </summary>
     static public Coordinator MyRole = new();
 
-    /// <summary>
-    /// 統計：座標特定回数
-    /// </summary>
     static private GameStatsEntry StatsCoordinate = NebulaAPI.CreateStatsEntry("stats.coordinator.coordinate", GameStatsCategory.Roles, MyRole);
 
     /// <summary>
@@ -112,39 +87,12 @@ internal class Coordinator : DefinedRoleTemplate, DefinedRole
     {
         DefinedRole RuntimeRole.Role => MyRole;
 
-        /// <summary>
-        /// ベント使用可能
-        /// </summary>
         bool RuntimeRole.CanUseVent => true;
-
-        /// <summary>
-        /// インポスター視界
-        /// </summary>
         bool RuntimeRole.HasImpostorVision => true;
-
-        /// <summary>
-        /// 停電無効
-        /// </summary>
         bool RuntimeRole.IgnoreBlackout => true;
-        
-        /// <summary>
-        /// 選択されたターゲットプレイヤー
-        /// </summary>
         private GamePlayer? SelectedTarget = null;
-
-        /// <summary>
-        /// 部屋選択画面のMetaScreen参照
-        /// </summary>
         private MetaScreen? RoomSelectScreen = null;
-
-        /// <summary>
-        /// アビリティボタンの参照
-        /// </summary>
         private ModAbilityButton? CoordinateButton = null;
-
-        /// <summary>
-        /// 累積スコア
-        /// </summary>
         private int TotalScore = 0;
 
         static private readonly Image CoordinateSprite = NebulaAPI.AddonAsset.GetResource("Neutral/Coordinator/CoordinateButton.png")!.AsImage(115f)!;
