@@ -1,4 +1,4 @@
-## Toa Made
+### Toa Made
 
 ## Anchor - Impostor
 
@@ -44,39 +44,9 @@
 "achievement.researcher.challenge.splitted.1" : "深淵に"
 "achievement.researcher.challenge.splitted.3" : "行方は、、、"
 
-## Coordinator - Neutral
-"teams.coordinator" : "コーディネーター"
-"role.coordinator.name" : "コーディネーター"
-"role.coordinator.short" : "コー"
-"role.coordinator.blurb" : "すべての座標は、その手の中に"
-"options.role.coordinator.cooldownMin" : "クールダウン（最小：高スコア時）"
-"options.role.coordinator.cooldownMax" : "クールダウン（最大：低スコア時）"
-"options.role.coordinator.overrideInitialCooldown" : "初期クールダウンを上書きする"
-"options.role.coordinator.initialCooldown" : "初期クールダウン"
-"options.role.coordinator.pointsMultiplier" : "勝利に必要なポイント倍率（5000x）"
-"options.role.coordinator.detail" : "プレイヤーを選択し、マップ上でその人の位置を推測します。<br>部屋を当てればスコア獲得、外せば<color=red>対象に通知</color>がいきます。"
-"role.coordinator.short" : "コー"
-"role.coordinator.blurb" : "座標を読み解け"
-"role.coordinator.doc" : "プレイヤーを選択し、マップ上でその人の位置を推測します。<br>位置を推測できるのはマップ内の特定の3箇所のみで、会議を挟むごとに指定エリアは変わります。<br>精度が高く、自分から遠いほどスコアが高くなります。<br>部屋を当てれば成功、外せば<color=red>対象に通知</color>がいきます。"
-"role.coordinator.ability.title" : "固有能力 "Guess the latitude and longitude""
-"role.coordinator.ability.coordinate" : "<title>座標特定</title>特定のエリアからのみ、選択したプレイヤーの位置を推測することができます。<br>精度が高く、自分から遠いほどスコアが高くなります。<br>部屋を当てれば成功、外せば<color=red>対象に通知</color>がいきます。"
-
-"options.role.coordinator.coordinateCoolDown" : "座標特定クールダウン"
-"options.role.coordinator.killCooldownBase" : "特定クールダウン（基本値）"
-"options.role.coordinator.killCooldownMin" : "特定クールダウン（最小値）"
-"options.role.coordinator.killCooldownMax" : "特定クールダウン（最大値）"
-"button.label.coordinate" : "座標特定"
-"coordinator.selectPlayer" : "ターゲットを選択"
-"coordinator.selectRoom" : "部屋を選択"
-"coordinator.notification.failed" : "見られている気がしたが、気のせいだったようだ..."
-"role.coordinator.taskText" : "[Coordinator] %SCORE%/%GOAL% pt"
-"role.coordinator.area.polus.outside.ejection" : "屋外（オフィス右溶岩）"
-"role.coordinator.area.polus.outside.comms" : "屋外（通信室左外）"
-"end.coordinator" : "コーディネーター%EXTRA%勝利"
-
 ### junjun Made
 
-#スポイラー spoiler impostor modifier
+##スポイラー modifier for Impostor
 "role.spoiler.name" : "スポイラー"
 "role.spoiler.short" : "スポ"
 "role.spoiler.blurb" : "ネタバレ注意"
@@ -85,7 +55,7 @@
 "role.spoiler.overlay" : "残り%COUNT%人"
 "options.role.spoiler.CanSeeRemainingRoles" : "キルした役職の残り人数が見える"
 
-#アキューサー neutral
+##アキューサー neutral
 "teams.accuser" : "アキューサー"
 "role.accuser.name" : "アキューサー"
 "role.accuser.short" : "アキュ"
@@ -96,7 +66,7 @@
 "options.role.accuser.numOfGuessPerMeeting" : "１回の会議で推測できる回数"
 "end.accuser" : "アキューサー%EXTRA%勝利"
 
-#ばーくろー modifier for crewmate
+##ばーくろー modifier for Crewmate
 "role.barclaw.name" : "ばーくろー"
 "role.barclaw.short" : "ば"
 "role.barclaw.generalBlurb" : "死が重なれば、沈黙は破られる"
@@ -110,7 +80,9 @@
 "options.role.barclaw.meetingDelayDispersionOption" : "会議が始まるまでの遅延のばらつき"
 "options.role.barclaw.allowGhostMeeting" : "死んでいても通報が入るか"
 
-# Settings
+### Common
+
+## Settings
 "settings.mrip.category.stable" : "安定版"
 "settings.mrip.category.snapshot" : "スナップショット"
 "settings.mrip.category.unknown" : "不明"
