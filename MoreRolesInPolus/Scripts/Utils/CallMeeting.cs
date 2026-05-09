@@ -8,9 +8,9 @@ namespace MoreRolesInPolus.Scripts.Utils
         private static DateTime lastMeetingCallTime = DateTime.MinValue;
 
         [NebulaRPC]
-        public static void CallMeeting(GamePlayer p, bool nowmeeting)
+        public static void CallMeeting(GamePlayer p)
         {
-            if (AmongUsClient.Instance.AmHost && !nowmeeting)
+            if (AmongUsClient.Instance.AmHost && !MeetingHud.Instance)
             {
                 if ((DateTime.UtcNow - lastMeetingCallTime).TotalSeconds < 5.0) return;
                 lastMeetingCallTime = DateTime.UtcNow;
