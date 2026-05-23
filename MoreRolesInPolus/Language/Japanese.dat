@@ -44,6 +44,33 @@
 "achievement.researcher.challenge.splitted.1" : "深淵に"
 "achievement.researcher.challenge.splitted.3" : "行方は、、、"
 
+## Autocracy - Crewmate
+"role.autocracy.name" : "独裁者"
+"role.autocracy.short" : "独"
+"role.autocracy.blurb" : "議場を独裁せよ"
+"role.autocracy.doc" : "タスクターンを強制終了して特別な緊急会議（独裁会議）を発動し、処刑対象を指定できるクルーメイトです。<br>独裁会議では、指定した人物をその日の処刑者にすることができます。<br>ただし、むやみにやると嫌われます。"
+"role.autocracy.tips" : "・独裁会議は強力ですが、使いどころを誤るとクルー全体の勝率を下げます。<br>・終盤の確定情報や処刑先が固まった場面で使うと効果的です。<br>・<color=#ff6941>特定の役職</color>が生存している場合、独裁者自身が死亡してしまうかも？"
+
+"role.autocracy.ability.title" : "固有能力 "独裁会議""
+"role.autocracy.ability.main" : "独裁会議を発動すると、通常の議論進行を打ち切って処刑対象を指定できます。<br>独裁会議中はGuesserの能力使用が制限されます。"
+"role.autocracy.ability.autocracy" : "<title>独裁会議</title>タスクターンを強制終了し、独裁会議を開始します。<br>会議中は処刑対象を指定して、その日の処刑結果を確定させます。"
+
+"button.label.autocracy" : "独裁会議"
+
+"options.role.autocracy.detail" : "独裁者は<color=#ff4d4d>タスクターンを強制終了</color>し、<color=#ffd166>独裁会議</color>を発動できます。<br>独裁会議では処刑対象を指定し、<color=#ff4d4d>その日の処刑結果を強制</color>できます。"
+
+## Rebel - Crewmate(Madmate)
+"role.rebel.name" : "レブル"
+"role.rebel.short" : "レブ"
+"role.rebel.blurb" : "理不尽な独裁を食い止めろ"
+"options.role.rebel.detail" : "レブルは<color=#ff4d4d>独裁者と付随して出現</color>する反逆の狂人です。<br>通常はインポスター勝利で勝利し、クルーメイト勝利では敗北します。<br>タスク関連設定を有効にすると、完了タスク数に応じてインポスターを段階的に判明できます。"
+"options.role.rebel.overrideTasks" : "タスク数を役職側で上書きする"
+"options.role.rebel.numOfTasksRequired" : "要求タスク数"
+"options.role.rebel.useMadmateIdentifySettings" : "通常Madmateの判明設定に従う"
+"options.role.rebel.canIdentifyImpostorsByTasks" : "タスク達成でインポスターを判明させる"
+"options.role.rebel.tasksRequiredForIdentify" : "判明に必要な完了タスク数"
+
+
 ### junjun Made
 
 ##スポイラー modifier for Impostor
