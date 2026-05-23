@@ -2,7 +2,7 @@ using MoreRolesInPolus.Scripts.Core;
 
 namespace MoreRolesInPolus.Roles.Crewmate;
 
-public class Rebel : DefinedSingleAbilityRoleTemplate<Rebel.Ability>, DefinedRole, HasCitation
+public class Rebel : DefinedRoleTemplate, DefinedSingleAbilityRole<Rebel.Ability>, DefinedRole, HasCitation
 {
   private const float RebelVisionMultiplier = 1.5f;
   private static readonly BoolConfiguration OverrideTasksOption = NebulaAPI.Configurations.Configuration("options.role.rebel.overrideTasks", false);
@@ -12,14 +12,58 @@ public class Rebel : DefinedSingleAbilityRoleTemplate<Rebel.Ability>, DefinedRol
   private static readonly IntegerConfiguration TasksRequiredForIdentifyOption = NebulaAPI.Configurations.Configuration("options.role.rebel.tasksRequiredForIdentify", (1, 15, 1), 2, () => !UseMadmateIdentifySettingsOption && CanIdentifyImpostorsByTasksOption);
   private static readonly int[] DefaultMadmateTaskThresholds = [2, 4, 6];
 
-  private Rebel() : base("rebel", new(255, 105, 65), RoleCategory.CrewmateRole, NebulaTeams.CrewmateTeam, [OverrideTasksOption, NumOfTasksRequiredOption, UseMadmateIdentifySettingsOption, CanIdentifyImpostorsByTasksOption, TasksRequiredForIdentifyOption]) { }
+  private Rebel() : base(
+    "rebel",
+    new(255, 105, 65),
+    RoleCategory.CrewmateRole,
+    NebulaTeams.CrewmateTeam,
+    [OverrideTasksOption, NumOfTasksRequiredOption, UseMadmateIdentifySettingsOption, CanIdentifyImpostorsByTasksOption, TasksRequiredForIdentifyOption],
+    withAssignmentOption: false,
+    withOptionHolder: false
+  ) { }
 
   Citation? HasCitation.Citation => AddonCitations.JinroJudgement;
 
-  public override Ability CreateAbility(GamePlayer player, int[] arguments) => new Ability(player);
+  public Ability CreateAbility(GamePlayer player, int[] arguments) => new Ability(player);
 
   AbilityAssignmentStatus DefinedRole.AssignmentStatus => AbilityAssignmentStatus.CanLoadToMadmate;
   static public Rebel MyRole = new();
+  RuntimeRole RuntimeAssignableGenerator<RuntimeRole>.CreateInstance(GamePlayer player, int[] arguments) => new Instance(player, arguments);
+
+  public class Instance : RuntimeAssignableTemplate, RuntimeRole
+  {
+    private readonly int[] CachedArguments;
+    private Ability? AbilityInstance;
+
+    public Instance(GamePlayer player, int[] arguments) : base(player)
+    {
+      CachedArguments = arguments;
+    }
+
+    DefinedRole RuntimeRole.Role => Rebel.MyRole;
+
+    void RuntimeAssignable.OnActivated()
+    {
+      AbilityInstance = Rebel.MyRole.CreateAbility(MyPlayer, CachedArguments).Register(this);
+    }
+
+    int[]? RuntimeAssignable.RoleArguments => (AbilityInstance as IPlayerAbility)?.AbilityArguments;
+
+    IEnumerable<IPlayerAbility> RuntimeAssignable.MyAbilities => GetAbilities();
+
+    private IEnumerable<IPlayerAbility> GetAbilities()
+    {
+      if (AbilityInstance == null) yield break;
+      yield return AbilityInstance;
+      foreach (var SubAbility in ((IPlayerAbility)AbilityInstance).SubAbilities) yield return SubAbility;
+    }
+
+    string RuntimeAssignable.DisplayName => AbilityInstance != null ? ((DefinedSingleAbilityRole<Ability>)Rebel.MyRole).GetDisplayName(AbilityInstance) : (Rebel.MyRole as DefinedAssignable).DisplayName;
+    string RuntimeAssignable.DisplayColoredName => (this as RuntimeAssignable).DisplayName.Color(Rebel.MyRole.UnityColor);
+    IEnumerable<DefinedAssignable> RuntimeAssignable.AssignableOnHelp => AbilityInstance != null ? [Rebel.MyRole, ..((IPlayerAbility)AbilityInstance).SubAssignableOnHelp] : [Rebel.MyRole];
+
+    bool RuntimeAssignable.MyCrewmateTaskIsIgnored => true;
+  }
 
   public class Ability : AbstractPlayerUsurpableAbility, IPlayerAbility
   {
@@ -55,12 +99,15 @@ public class Rebel : DefinedSingleAbilityRoleTemplate<Rebel.Ability>, DefinedRol
     void OnGameStart(GameStartEvent Event)
     {
       if (!AmOwner) return;
-      if (!OverrideTasksOption) return;
 
-      using (RPCRouter.CreateSection("RebelTask"))
+      int RequiredTaskCount = GetRequiredTaskCountForTaskOverride();
+      if (RequiredTaskCount > 0)
       {
-        MyPlayer.Tasks.Unbox().ReplaceTasksAndRecompute(NumOfTasksRequiredOption, 0, 0);
-        MyPlayer.Tasks.Unbox().BecomeToOutsider();
+        using (RPCRouter.CreateSection("RebelTask"))
+        {
+          MyPlayer.Tasks.Unbox().ReplaceTasksAndRecompute(RequiredTaskCount, 0, 0);
+          MyPlayer.Tasks.Unbox().BecomeToOutsider();
+        }
       }
 
       TryIdentifyImpostors();
@@ -138,6 +185,13 @@ public class Rebel : DefinedSingleAbilityRoleTemplate<Rebel.Ability>, DefinedRol
       return GetSharableIntOrDefault("numOfTasksToIdentifyImpostors" + StepIndex, DefaultThreshold);
     }
 
+    private static int GetRequiredTaskCountForTaskOverride()
+    {
+      int IdentifyCount = GetIdentifyImpostorCount();
+      if (IdentifyCount <= 0) return 0;
+      return GetRequiredTasksForIdentifyStep(IdentifyCount - 1);
+    }
+
     private static int GetSharableIntOrDefault(string Id, int DefaultValue)
     {
       var SharableVariable = NebulaAPI.Configurations.GetSharableVariable<int>(Id);
@@ -158,5 +212,6 @@ public class Rebel : DefinedSingleAbilityRoleTemplate<Rebel.Ability>, DefinedRol
       if (!AmOwner) return;
       if (RebelVisionMultiplier > Event.LightQuickRange) Event.LightQuickRange = RebelVisionMultiplier;
     }
+
   }
 }
