@@ -10,6 +10,7 @@
 using Nebula.Patches;
 using Virial.Runtime;
 using UnityEngine.UI;
+using global::MoreRolesInPolus.Scripts.Core;
 
 namespace Toa.MoreRolesInPolus.Scripts.Settings;
 
@@ -231,7 +232,7 @@ public static class MRIPMainMenuPatch
             
             
             // テンプレートボタンの位置情報
-            UnityEngine.Vector3 templatePos = templateButton.transform.localPosition;
+            Virial.Compat.Vector3 templatePos = templateButton.transform.localPosition;
             
             // ボタン間隔を計算（2列構成）
             float spacingX = 0f;
@@ -281,7 +282,7 @@ public static class MRIPMainMenuPatch
             float newX = templatePos.x + (spacingX * col);
             float newY = templatePos.y + (spacingY * row);
             
-            mripButtonObj.transform.localPosition = new UnityEngine.Vector3(newX, newY, templatePos.z);
+            mripButtonObj.transform.localPosition = new Virial.Compat.Vector3(newX, newY, templatePos.z);
             
             
             // TextTranslatorTMPを無効化（翻訳で上書きされないように）
@@ -339,24 +340,24 @@ public static class MRIPMainMenuPatch
         {
             
             // accountButtonsの親と同じ階層に配置（Nebulaと同じ方式）
-            MRIPVersionsScreen = UnityHelper.CreateObject("MRIPVersions", mainMenu.accountButtons.transform.parent, new UnityEngine.Vector3(0, 0, -1f));
+            MRIPVersionsScreen = UnityHelper.CreateObject("MRIPVersions", mainMenu.accountButtons.transform.parent, new Virial.Compat.Vector3(0, 0, -1f));
             MRIPVersionsScreen.transform.localScale = MainMenuSetUpPatch.NebulaScreen!.transform.localScale;
             
             // MetaScreenを生成（GenerateWindowではなくGenerateScreen）
-            var screen = MetaScreen.GenerateScreen(new UnityEngine.Vector2(6.2f, 4.1f), MRIPVersionsScreen.transform, new UnityEngine.Vector3(-0.1f, 0, 0f), false, false, false);
+            var screen = MetaScreen.GenerateScreen(new Virial.Compat.Vector2(6.2f, 4.1f), MRIPVersionsScreen.transform, new Virial.Compat.Vector3(-0.1f, 0, 0f), false, false, false);
             
             // テキスト属性を設定
             TextAttributeOld NameAttribute = new TextAttributeOld(TextAttributeOld.BoldAttr)
             {
                 FontMaterial = VanillaAsset.StandardMaskedFontMaterial,
-                Size = new UnityEngine.Vector2(2.2f, 0.3f),
+                Size = new Virial.Compat.Vector2(2.2f, 0.3f),
                 Alignment = TMPro.TextAlignmentOptions.Left
             };
             
             TextAttributeOld CategoryAttribute = new TextAttributeOld(TextAttributeOld.BoldAttr)
             {
                 FontMaterial = VanillaAsset.StandardMaskedFontMaterial,
-                Size = new UnityEngine.Vector2(0.8f, 0.3f),
+                Size = new Virial.Compat.Vector2(0.8f, 0.3f),
                 Alignment = TMPro.TextAlignmentOptions.Center
             };
             CategoryAttribute.EditFontSize(1.2f, 0.6f, 1.2f);
@@ -364,7 +365,7 @@ public static class MRIPMainMenuPatch
             TextAttributeOld ButtonAttribute = new TextAttributeOld(TextAttributeOld.BoldAttr)
             {
                 FontMaterial = VanillaAsset.StandardMaskedFontMaterial,
-                Size = new UnityEngine.Vector2(1f, 0.2f),
+                Size = new Virial.Compat.Vector2(1f, 0.2f),
                 Alignment = TMPro.TextAlignmentOptions.Center
             };
             
@@ -383,7 +384,7 @@ public static class MRIPMainMenuPatch
             {
                 var cat = category; // クロージャ用
                 menuWidget.Append(new MetaWidgetOld.Button(() => UpdateContents(cat), 
-                    new TextAttributeOld(TextAttributeOld.BoldAttr) { Size = new UnityEngine.Vector2(0.95f, 0.28f) }) 
+                    new TextAttributeOld(TextAttributeOld.BoldAttr) { Size = new Virial.Compat.Vector2(0.95f, 0.28f) }) 
                 { 
                     RawText = Language.Translate(MRIPModUpdater.CategoryNames[(int)category]).Replace("*", "")
                 });
@@ -394,7 +395,7 @@ public static class MRIPMainMenuPatch
                 new System.Tuple<IMetaWidgetOld, float>(new MetaWidgetOld.HorizonalMargin(0.1f), 0.1f),
                 new System.Tuple<IMetaWidgetOld, float>(menuWidget, 1f),
                 new System.Tuple<IMetaWidgetOld, float>(new MetaWidgetOld.HorizonalMargin(0.1f), 0.1f),
-                new System.Tuple<IMetaWidgetOld, float>(new MetaWidgetOld.ScrollView(new UnityEngine.Vector2(5f, 4f), new MetaWidgetOld(), true) 
+                new System.Tuple<IMetaWidgetOld, float>(new MetaWidgetOld.ScrollView(new Virial.Compat.Vector2(5f, 4f), new MetaWidgetOld(), true) 
                 { 
                     Alignment = IMetaWidgetOld.AlignmentOption.Center, 
                     InnerRef = innerRef,
@@ -449,7 +450,7 @@ public static class MRIPMainMenuPatch
                         placeable.Add(new MetaWidgetOld.Text(CategoryAttribute) 
                         { 
                             MyText = new Nebula.Utilities.ColorTextComponent(
-                                MRIPModUpdater.CategoryColors[(int)version.Category], 
+                                MRIPModUpdater.CategoryColors[(int)version.Category].ToUnityColor(), 
                                 NebulaGUIWidgetEngine.Instance.RawTextComponent(Language.Translate(startKey).Replace("*", "")))
                         });
                         placeable.Add(new MetaWidgetOld.HorizonalMargin(0.15f));
@@ -465,12 +466,12 @@ public static class MRIPMainMenuPatch
                                 button.OnClick.AddListener(() => Application.OpenURL($"https://github.com/10-ui/MoreRolesInPolus/releases/tag/{version.RawTag}"));
                                 button.OnMouseOver.AddListener(() =>
                                 {
-                                    text.color = UnityEngine.Color.green;
+                                    text.color = Virial.Color.Green.ToUnityColor();
                                     if (version.Body != null) NebulaManager.Instance.SetHelpWidget(button, version.Body);
                                 });
                                 button.OnMouseOut.AddListener(() =>
                                 {
-                                    text.color = UnityEngine.Color.white;
+                                    text.color = Virial.Color.White.ToUnityColor();
                                     NebulaManager.Instance.HideHelpWidgetIf(button);
                                 });
                             }

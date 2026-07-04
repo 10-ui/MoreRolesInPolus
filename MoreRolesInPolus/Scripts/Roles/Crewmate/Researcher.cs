@@ -220,7 +220,7 @@ public class Researcher : DefinedSingleAbilityRoleTemplate<Researcher.Ability>, 
             {
                 if (gplayer.IsDead || gplayer.IsBlown) continue;
 
-                UnityEngine.Vector2 pos = gplayer.TruePosition;
+                Virial.Compat.Vector2 pos = gplayer.TruePosition;
 
                 var roomResult = NebulaAPI.CurrentGame.CurrentMap.GetRoomName(pos, false, false, false);
 

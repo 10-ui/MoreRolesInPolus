@@ -68,7 +68,7 @@ public class Barclaw : DefinedAllocatableModifierTemplate, DefinedAllocatableMod
    
                     if(showMeetingInFlash) AmongUsUtil.PlayQuickFlash(MyRole.UnityColor);
 
-                    float t = Mathn.Max(0.1f, meetingDelayOption) + meetingDelayDispersionOption * (float)System.Random.Shared.NextDouble();
+                    float t = Virial.Utilities.Mathn.Max(0.1f, meetingDelayOption) + meetingDelayDispersionOption * (float)System.Random.Shared.NextDouble();
                     
                     NebulaManager.Instance.StartCoroutine(WaitAndCallCoroutine(t).WrapToIl2Cpp());
                     numOfButtonCount ++;

@@ -99,10 +99,10 @@ public static class MRIPModUpdater
         Unknown
     }
     
-    public static readonly UnityEngine.Color[] CategoryColors = {
-        new UnityEngine.Color(176f / 255f, 204f / 255f, 251f / 255f),
-        new UnityEngine.Color(247f / 255f, 255f / 255f, 29f / 255f),
-        new UnityEngine.Color(141f / 255f, 141f / 255f, 141f / 255f)
+    public static readonly Virial.Color[] CategoryColors = {
+        new Virial.Color(176f / 255f, 204f / 255f, 251f / 255f),
+        new Virial.Color(247f / 255f, 255f / 255f, 29f / 255f),
+        new Virial.Color(141f / 255f, 141f / 255f, 141f / 255f)
     };
     
     public static readonly string[] CategoryNames = {
@@ -190,9 +190,9 @@ public static class MRIPModUpdater
             }
             
             MetaScreen downloadWindow = MetaScreen.GenerateWindow(
-                new UnityEngine.Vector2(3.5f, 1.5f),
+                new Virial.Compat.Vector2(3.5f, 1.5f),
                 DestroyableSingleton<HudManager>.InstanceExists ? DestroyableSingleton<HudManager>.Instance.transform : null,
-                UnityEngine.Vector3.zero,
+                Virial.Compat.Vector3.Zero,
                 true, false, false, BackgroundSetting.Old, false
             );
             
@@ -205,7 +205,7 @@ public static class MRIPModUpdater
                     new NoSGUIText(GUIAlignment.Center, NebulaGUIWidgetEngine.API.GetAttribute(AttributeAsset.OverlayContent), 
                         new RawTextComponent(Language.Translate("settings.mrip.downloading").Replace("*", "")))
                 }),
-                new UnityEngine.Vector2(0.5f, 0.5f),
+                new Virial.Compat.Vector2(0.5f, 0.5f),
                 out size
             );
             
@@ -357,9 +357,9 @@ public static class MRIPModUpdater
             float height = Math.Max(2.5f, 1.5f + lineCount * 0.25f);
             
             MetaScreen window = MetaScreen.GenerateWindow(
-                new UnityEngine.Vector2(5.5f, height),
+                new Virial.Compat.Vector2(5.5f, height),
                 DestroyableSingleton<HudManager>.InstanceExists ? DestroyableSingleton<HudManager>.Instance.transform : null,
-                UnityEngine.Vector3.zero,
+                Virial.Compat.Vector3.Zero,
                 true, true, true, BackgroundSetting.Old, true
             );
             
@@ -382,7 +382,7 @@ public static class MRIPModUpdater
                         (GUIClickable _) => { window.CloseScreen(); }, 
                         null, null, null, null, null, null)
                 }),
-                new UnityEngine.Vector2(0.5f, 0.5f),
+                new Virial.Compat.Vector2(0.5f, 0.5f),
                 out size
             );
         }
